@@ -3,17 +3,23 @@
 #include<stdio.h>
 #include<string.h>
 
+#include"Snake.h"
+#include"Board.h"
+
+
 extern "C" {
 #include"./SDL2-2.0.10/include/SDL.h"
 #include"./SDL2-2.0.10/include/SDL_main.h"
-}
+} 
 
 #define SCREEN_WIDTH	640
 #define SCREEN_HEIGHT	480
+#define INFO_SCREN_HEIGHT 36
+
+#define BOARD_WIDTH 300
+#define BOARD_HEIGHT 300
 
 
-// narysowanie napisu txt na powierzchni screen, zaczynaj¹c od punktu (x, y)
-// charset to bitmapa 128x128 zawieraj¹ca znaki
 // draw a text txt on surface screen, starting from the point (x, y)
 // charset is a 128x128 bitmap containing character images
 void DrawString(SDL_Surface *screen, int x, int y, const char *text,
@@ -39,8 +45,6 @@ void DrawString(SDL_Surface *screen, int x, int y, const char *text,
 	};
 
 
-// narysowanie na ekranie screen powierzchni sprite w punkcie (x, y)
-// (x, y) to punkt œrodka obrazka sprite na ekranie
 // draw a surface sprite on a surface screen in point (x, y)
 // (x, y) is the center of sprite on screen
 void DrawSurface(SDL_Surface *screen, SDL_Surface *sprite, int x, int y) {
@@ -53,7 +57,6 @@ void DrawSurface(SDL_Surface *screen, SDL_Surface *sprite, int x, int y) {
 	};
 
 
-// rysowanie pojedynczego pixela
 // draw a single pixel
 void DrawPixel(SDL_Surface *surface, int x, int y, Uint32 color) {
 	int bpp = surface->format->BytesPerPixel;
@@ -62,8 +65,6 @@ void DrawPixel(SDL_Surface *surface, int x, int y, Uint32 color) {
 	};
 
 
-// rysowanie linii o d³ugoœci l w pionie (gdy dx = 0, dy = 1) 
-// b¹dŸ poziomie (gdy dx = 1, dy = 0)
 // draw a vertical (when dx = 0, dy = 1) or horizontal (when dx = 1, dy = 0) line
 void DrawLine(SDL_Surface *screen, int x, int y, int l, int dx, int dy, Uint32 color) {
 	for(int i = 0; i < l; i++) {
@@ -74,7 +75,6 @@ void DrawLine(SDL_Surface *screen, int x, int y, int l, int dx, int dy, Uint32 c
 	};
 
 
-// rysowanie prostok¹ta o d³ugoœci boków l i k
 // draw a rectangle of size l by k
 void DrawRectangle(SDL_Surface *screen, int x, int y, int l, int k,
                    Uint32 outlineColor, Uint32 fillColor) {
@@ -88,11 +88,25 @@ void DrawRectangle(SDL_Surface *screen, int x, int y, int l, int k,
 	};
 
 
+//Snake init_snake() {
+    //Snake snake = Snake(2);
+    //int length = snake.getLength(); // Example length, replace with actual length if available
+    //printf("Snake initialized with:\nlength: %d\n", length);
+    //return snake;
+//}
+
+void init_board(){
+
+}
+
 // main
 #ifdef __cplusplus
 extern "C"
 #endif
 int main(int argc, char **argv) {
+
+	//Snake snake = init_snake();
+
 	int t1, t2, quit, frames, rc;
 	double delta, worldTime, fpsTimer, fps, distance, etiSpeed;
 	SDL_Event event;
@@ -102,14 +116,15 @@ int main(int argc, char **argv) {
 	SDL_Window *window;
 	SDL_Renderer *renderer;
 
-	// okno konsoli nie jest widoczne, je¿eli chcemy zobaczyæ
-	// komunikaty wypisywane printf-em trzeba w opcjach:
-	// project -> szablon2 properties -> Linker -> System -> Subsystem
-	// zmieniæ na "Console"
+
+	Board board = Board(SCREEN_WIDTH, SCREEN_HEIGHT, BOARD_WIDTH, BOARD_HEIGHT);
+	Snake snake = Snake(2);
+
 	// console window is not visible, to see the printf output
 	// the option:
 	// project -> szablon2 properties -> Linker -> System -> Subsystem
 	// must be changed to "Console"
+	// to remove must be changed to "Native"
 	printf("wyjscie printfa trafia do tego okienka\n");
 	printf("printf output goes here\n");
 
@@ -118,7 +133,6 @@ int main(int argc, char **argv) {
 		return 1;
 		}
 
-	// tryb pe³noekranowy / fullscreen mode
 //	rc = SDL_CreateWindowAndRenderer(0, 0, SDL_WINDOW_FULLSCREEN_DESKTOP,
 //	                                 &window, &renderer);
 	rc = SDL_CreateWindowAndRenderer(SCREEN_WIDTH, SCREEN_HEIGHT, 0,
@@ -144,10 +158,10 @@ int main(int argc, char **argv) {
 	                           SCREEN_WIDTH, SCREEN_HEIGHT);
 
 
-	// wy³¹czenie widocznoœci kursora myszy
+    // disabling mouse cursor visibility
 	SDL_ShowCursor(SDL_DISABLE);
 
-	// wczytanie obrazka cs8x8.bmp
+	// load image cs8x8.bmp
 	charset = SDL_LoadBMP("./cs8x8.bmp");
 	if(charset == NULL) {
 		printf("SDL_LoadBMP(cs8x8.bmp) error: %s\n", SDL_GetError());
@@ -160,18 +174,6 @@ int main(int argc, char **argv) {
 		};
 	SDL_SetColorKey(charset, true, 0x000000);
 
-	eti = SDL_LoadBMP("./eti.bmp");
-	if(eti == NULL) {
-		printf("SDL_LoadBMP(eti.bmp) error: %s\n", SDL_GetError());
-		SDL_FreeSurface(charset);
-		SDL_FreeSurface(screen);
-		SDL_DestroyTexture(scrtex);
-		SDL_DestroyWindow(window);
-		SDL_DestroyRenderer(renderer);
-		SDL_Quit();
-		return 1;
-		};
-
 	char text[128];
 	int czarny = SDL_MapRGB(screen->format, 0x00, 0x00, 0x00);
 	int zielony = SDL_MapRGB(screen->format, 0x00, 0xFF, 0x00);
@@ -181,7 +183,7 @@ int main(int argc, char **argv) {
 	t1 = SDL_GetTicks();
 
 	frames = 0;
-	fpsTimer = 0;
+	fpsTimer = 60;
 	fps = 0;
 	quit = 0;
 	worldTime = 0;
@@ -191,9 +193,6 @@ int main(int argc, char **argv) {
 	while(!quit) {
 		t2 = SDL_GetTicks();
 
-		// w tym momencie t2-t1 to czas w milisekundach,
-		// jaki uplyna³ od ostatniego narysowania ekranu
-		// delta to ten sam czas w sekundach
 		// here t2-t1 is the time in milliseconds since
 		// the last screen was drawn
 		// delta is the same time in seconds
@@ -206,9 +205,9 @@ int main(int argc, char **argv) {
 
 		SDL_FillRect(screen, NULL, czarny);
 
-		DrawSurface(screen, eti,
-		            SCREEN_WIDTH / 2 + sin(distance) * SCREEN_HEIGHT / 3,
-			    SCREEN_HEIGHT / 2 + cos(distance) * SCREEN_HEIGHT / 3);
+		
+
+		
 
 		fpsTimer += delta;
 		if(fpsTimer > 0.5) {
@@ -217,8 +216,11 @@ int main(int argc, char **argv) {
 			fpsTimer -= 0.5;
 			};
 
-		// tekst informacyjny / info text
-		DrawRectangle(screen, 4, 4, SCREEN_WIDTH - 8, 36, czerwony, niebieski);
+
+		board.render(screen);
+
+		// info text
+		DrawRectangle(screen, 4, 4, SCREEN_WIDTH - 8, INFO_SCREN_HEIGHT, czerwony, niebieski);
 		//            "template for the second project, elapsed time = %.1lf s  %.0lf frames / s"
 		sprintf(text, "Szablon drugiego zadania, czas trwania = %.1lf s  %.0lf klatek / s", worldTime, fps);
 		DrawString(screen, screen->w / 2 - strlen(text) * 8 / 2, 10, text, charset);
@@ -231,7 +233,8 @@ int main(int argc, char **argv) {
 		SDL_RenderCopy(renderer, scrtex, NULL, NULL);
 		SDL_RenderPresent(renderer);
 
-		// obs³uga zdarzeñ (o ile jakieœ zasz³y) / handling of events (if there were any)
+
+		// handling of events (if there were any)
 		while(SDL_PollEvent(&event)) {
 			switch(event.type) {
 				case SDL_KEYDOWN:
@@ -250,7 +253,7 @@ int main(int argc, char **argv) {
 		frames++;
 		};
 
-	// zwolnienie powierzchni / freeing all surfaces
+	// freeing all surfaces
 	SDL_FreeSurface(charset);
 	SDL_FreeSurface(screen);
 	SDL_DestroyTexture(scrtex);
