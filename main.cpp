@@ -19,6 +19,8 @@ extern "C" {
 #define BOARD_WIDTH 300
 #define BOARD_HEIGHT 300
 
+#define SNAKE_SIZE 20
+
 
 // draw a text txt on surface screen, starting from the point (x, y)
 // charset is a 128x128 bitmap containing character images
@@ -88,24 +90,12 @@ void DrawRectangle(SDL_Surface *screen, int x, int y, int l, int k,
 	};
 
 
-//Snake init_snake() {
-    //Snake snake = Snake(2);
-    //int length = snake.getLength(); // Example length, replace with actual length if available
-    //printf("Snake initialized with:\nlength: %d\n", length);
-    //return snake;
-//}
-
-void init_board(){
-
-}
-
 // main
 #ifdef __cplusplus
 extern "C"
 #endif
 int main(int argc, char **argv) {
 
-	//Snake snake = init_snake();
 
 	int t1, t2, quit, frames, rc;
 	double delta, worldTime, fpsTimer, fps, distance, etiSpeed;
@@ -118,7 +108,7 @@ int main(int argc, char **argv) {
 
 
 	Board board = Board(SCREEN_WIDTH, SCREEN_HEIGHT, BOARD_WIDTH, BOARD_HEIGHT);
-	Snake snake = Snake(2);
+	Snake snake = Snake(SNAKE_SIZE, 2, (SCREEN_WIDTH - SNAKE_SIZE)/2, (SCREEN_HEIGHT - SNAKE_SIZE) /2);
 
 	// console window is not visible, to see the printf output
 	// the option:
@@ -190,7 +180,7 @@ int main(int argc, char **argv) {
 	distance = 0;
 	etiSpeed = 1;
 
-	while(!quit) {
+	while (!quit) {
 		t2 = SDL_GetTicks();
 
 		// here t2-t1 is the time in milliseconds since
@@ -205,19 +195,21 @@ int main(int argc, char **argv) {
 
 		SDL_FillRect(screen, NULL, czarny);
 
-		
 
-		
+
+
 
 		fpsTimer += delta;
-		if(fpsTimer > 0.5) {
+		if (fpsTimer > 0.5) {
 			fps = frames * 2;
 			frames = 0;
 			fpsTimer -= 0.5;
-			};
+		};
 
 
 		board.render(screen);
+		snake.draw_snake(screen, niebieski);
+		snake.move();
 
 		// info text
 		DrawRectangle(screen, 4, 4, SCREEN_WIDTH - 8, INFO_SCREN_HEIGHT, czerwony, niebieski);
@@ -229,30 +221,51 @@ int main(int argc, char **argv) {
 		DrawString(screen, screen->w / 2 - strlen(text) * 8 / 2, 26, text, charset);
 
 		SDL_UpdateTexture(scrtex, NULL, screen->pixels, screen->pitch);
-//		SDL_RenderClear(renderer);
+		//		SDL_RenderClear(renderer);
 		SDL_RenderCopy(renderer, scrtex, NULL, NULL);
 		SDL_RenderPresent(renderer);
 
 
+
+
 		// handling of events (if there were any)
-		while(SDL_PollEvent(&event)) {
-			switch(event.type) {
-				case SDL_KEYDOWN:
-					if(event.key.keysym.sym == SDLK_ESCAPE) quit = 1;
-					else if(event.key.keysym.sym == SDLK_UP) etiSpeed = 2.0;
-					else if(event.key.keysym.sym == SDLK_DOWN) etiSpeed = 0.3;
-					break;
-				case SDL_KEYUP:
-					etiSpeed = 1.0;
-					break;
-				case SDL_QUIT:
+		while (SDL_PollEvent(&event)) {
+			switch (event.type) {
+			case SDL_KEYDOWN:
+				switch (event.key.keysym.sym) {
+				case SDLK_ESCAPE:
 					quit = 1;
 					break;
-				};
-			};
-		frames++;
-		};
+				case SDLK_UP:
+					snake.changeDirection(Snake::Up);
+					break;
+				case SDLK_DOWN:
+					snake.changeDirection(Snake::Down);
+					break;
+				case SDLK_LEFT:
+					snake.changeDirection(Snake::Left);
+					break;
+				case SDLK_RIGHT:
+					snake.changeDirection(Snake::Right);
+					break;
+				case SDLK_w:
+					etiSpeed = 2.0;
+					break;
+				case SDLK_s:
+					etiSpeed = 0.3;
+					break;
+				}
+				break;
+			case SDL_KEYUP:
+				break;
+			case SDL_QUIT:
+				quit = 1;
+				break;
+			}
 
+			frames++;
+		};
+	}
 	// freeing all surfaces
 	SDL_FreeSurface(charset);
 	SDL_FreeSurface(screen);

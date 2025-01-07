@@ -1,19 +1,39 @@
+extern "C" {
+#include"./SDL2-2.0.10/include/SDL.h"
+#include"./SDL2-2.0.10/include/SDL_main.h"
+}
+
 class Snake
 {
 public:
-    Snake(int length); // Constructor declaration
+    enum Directions
+    {
+        Up,
+		Down,
+		Left,
+		Right
+    };
+
+    struct Node;
+    Snake(int size, int length, int x, int y); // Constructor declaration
 	~Snake(); // Destructor declaration
     int getLength() const; // Method to return a value
 
-    void move(int dx, int dy);
+    void move();
     void grow();
     bool checkCollision(int width, int height) const;
+    void draw_snake(SDL_Surface* screen, Uint32 color);
+    void changeDirection(Directions newDirection); // New method declaration
 
-    struct Node;
+
+	Node* getHead() const;
+
 private:
+    int size;
     int length;
-    Node* head;
     Node* tail;
+    Node* head;
+	Directions direction;
     void addSegment(int x, int y);
 	void init_snake();
 };
@@ -21,16 +41,18 @@ private:
 
 struct Snake::Node {
     int x, y; // Position of the segment
+    int size; // Size of the segment
     Node* next_node; // Pointer to the next segment
 
-    Node(int x, int y) : x(x), y(y), next_node(nullptr) {}
+    Node(int x, int y, int size) : x(x), y(y), size(size), next_node(nullptr) {}
 };
 
 // Constructor definition
-Snake::Snake(int length) : length(length), head(nullptr) {
+Snake::Snake(int size, int length, int x, int y) : size(size), length(length), head(nullptr) {
     // Initialize the snake with a single segment
-    head = new Node(0, 0);
+    head = new Node(x, y, size);
     tail = head;
+	direction = Right;
 	init_snake();
 }
 
@@ -54,6 +76,37 @@ void Snake::init_snake() {
 	printf("Snake initialized with:\nlength: %d\n", length);
 }
 
+Snake::Node* Snake::getHead() const {
+    return head;
+}
+
+void Snake::changeDirection(Directions newDirection) {
+	printf("Changing direction\n");
+    // Prevent the snake from reversing direction
+    if ((direction == Up && newDirection != Down) ||
+        (direction == Down && newDirection != Up) ||
+        (direction == Left && newDirection != Right) ||
+        (direction == Right && newDirection != Left)) {
+        direction = newDirection;
+    }
+}
+
+void Snake::draw_snake(SDL_Surface* screen, Uint32 color) {
+    Node* current = head;
+	int i = 0;
+    while (current != nullptr) {
+        SDL_Rect rect;
+		//printf("x: %d, y: %d %d\n", current->x, current->y);
+        rect.x = current->x;
+        rect.y = current->y;
+        rect.w = current->size;
+        rect.h = current->size;
+        SDL_FillRect(screen, &rect, color);
+        current = current->next_node;
+
+        i++;
+    }
+}
 
 /***
  * This function updates the position of the snake's head by adding a new segment
@@ -61,8 +114,24 @@ void Snake::init_snake() {
  * @param dx: The change in the x-coordinate.
  * @param dy: The change in the y-coordinate.
  */
-void move(int dx, int dy);
-void Snake::move(int dx, int dy) {
+void Snake::move() {
+	int dx = 0;
+	int dy = 0;
+	printf("Moving snake dir = %d\n", direction);
+    if (direction == Up) {
+        dy = -size;
+    }
+    else if (direction == Down) {
+        dy = size;
+    }
+    else if (direction == Left) {
+        dx = -size;
+    }
+    else if (direction == Right) {
+        dx = size;
+    }
+
+    
     int newX = head->x + dx;
     int newY = head->y + dy;
     addSegment(newX, newY);
@@ -79,7 +148,7 @@ void Snake::grow() {
 }
 
 void Snake::addSegment(int x, int y) {
-    Node* newSegment = new Node(x, y);
+    Node* newSegment = new Node(x, y, size);
     if (tail != nullptr) {
         tail->next_node = newSegment;
     }
