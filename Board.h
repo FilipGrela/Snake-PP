@@ -5,16 +5,19 @@ extern "C" {
 
 class Board {
 public:
-    Board(int screenWidth, int screenHeight, int width, int height);
+    Board(int screenWidth, int screenHeight, int width, int height, int unitSize);
     void render(SDL_Surface* surface);
 
 private:
+	int unitSize;
     int width, height;
     SDL_Rect boardRect;
 };
 
-Board::Board( int screenWidth, int screenHeight, int width, int height) : width(width), height(height) {
-    boardRect = {(screenWidth - width) / 2, (screenHeight - height) / 2, width, height};
+Board::Board( int screenWidth, int screenHeight, int width, int height, int unitSize) : width(width), height(height), unitSize(unitSize){
+	int height_px = height * unitSize;
+	int width_px = width * unitSize;
+    boardRect = {(screenWidth - width_px) / 2, (screenHeight - height_px) / 2, width_px, height_px };
 }
 
 void Board::render(SDL_Surface* surface) {

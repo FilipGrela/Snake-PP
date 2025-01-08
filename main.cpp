@@ -16,10 +16,10 @@ extern "C" {
 #define SCREEN_HEIGHT	480
 #define INFO_SCREN_HEIGHT 36
 
-#define BOARD_WIDTH 300
-#define BOARD_HEIGHT 300
+#define BOARD_WIDTH_UNITS 20
+#define BOARD_HEIGHT_USNITS 20
 
-#define SNAKE_SIZE 20
+#define UNIT_SIZE 20
 
 
 // draw a text txt on surface screen, starting from the point (x, y)
@@ -96,7 +96,6 @@ extern "C"
 #endif
 int main(int argc, char **argv) {
 
-
 	int t1, t2, quit, frames, rc;
 	double delta, worldTime, fpsTimer, fps, distance, etiSpeed;
 	SDL_Event event;
@@ -107,8 +106,10 @@ int main(int argc, char **argv) {
 	SDL_Renderer *renderer;
 
 
-	Board board = Board(SCREEN_WIDTH, SCREEN_HEIGHT, BOARD_WIDTH, BOARD_HEIGHT);
-	Snake snake = Snake(SNAKE_SIZE, 2, (SCREEN_WIDTH - SNAKE_SIZE)/2, (SCREEN_HEIGHT - SNAKE_SIZE) /2);
+	Board board = Board(SCREEN_WIDTH, SCREEN_HEIGHT, BOARD_WIDTH_UNITS, BOARD_HEIGHT_USNITS, UNIT_SIZE);
+	int snakeOffsetX = (SCREEN_WIDTH - BOARD_WIDTH_UNITS * UNIT_SIZE) / 2;
+	int snakeOffsetY = (SCREEN_HEIGHT - BOARD_HEIGHT_USNITS * UNIT_SIZE) / 2;
+	Snake snake = Snake(2, 0, 0, UNIT_SIZE, snakeOffsetX, snakeOffsetY);
 
 	// console window is not visible, to see the printf output
 	// the option:
@@ -180,6 +181,9 @@ int main(int argc, char **argv) {
 	distance = 0;
 	etiSpeed = 1;
 
+	double snakeSpeedUnitsPerSeconnd = 3;
+	double lastSnakeUpdate = 0;
+
 	while (!quit) {
 		t2 = SDL_GetTicks();
 
@@ -195,10 +199,6 @@ int main(int argc, char **argv) {
 
 		SDL_FillRect(screen, NULL, czarny);
 
-
-
-
-
 		fpsTimer += delta;
 		if (fpsTimer > 0.5) {
 			fps = frames * 2;
@@ -209,7 +209,12 @@ int main(int argc, char **argv) {
 
 		board.render(screen);
 		snake.draw_snake(screen, niebieski);
-		snake.move();
+		lastSnakeUpdate += delta;
+		if (lastSnakeUpdate >= 1/snakeSpeedUnitsPerSeconnd)
+		{	
+			lastSnakeUpdate = 0;
+			snake.move();
+		}
 
 		// info text
 		DrawRectangle(screen, 4, 4, SCREEN_WIDTH - 8, INFO_SCREN_HEIGHT, czerwony, niebieski);
@@ -249,10 +254,7 @@ int main(int argc, char **argv) {
 					snake.changeDirection(Snake::Right);
 					break;
 				case SDLK_w:
-					etiSpeed = 2.0;
-					break;
-				case SDLK_s:
-					etiSpeed = 0.3;
+					snake.grow();
 					break;
 				}
 				break;
