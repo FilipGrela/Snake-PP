@@ -1,4 +1,4 @@
-#define _USE_MATH_DEFINES
+﻿#define _USE_MATH_DEFINES
 #include<math.h>
 #include<stdio.h>
 #include<string.h>
@@ -17,6 +17,9 @@ extern "C" {
 #define SCREEN_WIDTH	640
 #define SCREEN_HEIGHT	540
 #define INFO_SCREN_HEIGHT 36
+
+#define SCOREBOARD_PATH "scoreboard.txt"
+#define SCOREBOARD_SIZE 10
 
 #define BOARD_WIDTH_UNITS 20
 #define BOARD_HEIGHT_USNITS 20
@@ -48,6 +51,9 @@ struct GameData {
 	double powerUpActivationTime = NULL;
     bool snakeAlive;
 	bool powerUpActive;
+
+	int* scoresTabele = nullptr;
+
     SDL_Event event;
     SDL_Surface* screen, * charset;
     SDL_Texture* scrtex;
@@ -288,6 +294,36 @@ void drawFood(SDL_Surface* screen, Food food) {
 	}
 }
 
+void drawScoreboard(GameData* gameData) {
+	SDL_Surface* screen = gameData->screen;
+	int x = 10; // X position of the scoreboard
+	int y = 50; // Y position of the scoreboard
+	int lineHeight = 20; // Height of each line
+	int padding = 5; // Padding between lines
+	int headerHeight = 30; // Height of the header
+	int width = 200; // Width of the scoreboard
+
+	
+	// Draw the column headers
+	DrawString(screen, x + padding, y, "Rank", gameData->charset);
+	DrawString(screen, x + padding + 50, y, "Score", gameData->charset);
+
+	// Draw the scores
+	y += lineHeight + padding;
+	for (int i = 0; i < SCOREBOARD_SIZE; i++) {
+		if (gameData->scoresTabele[i] >= 0) {
+			char rankText[8];
+			char scoreText[32];
+			sprintf(rankText, "%d.", i + 1);
+			sprintf(scoreText, "%d", gameData->scoresTabele[i]);
+			DrawString(screen, x + padding, y, rankText, gameData->charset);
+			DrawString(screen, x + padding + 50, y, scoreText, gameData->charset);
+			y += lineHeight + padding;
+		}
+	}
+}
+
+
 void draw(Snake* snake, Board* board, GameData* gameData) {
 	int czarny = SDL_MapRGB(gameData->screen->format, 0x00, 0x00, 0x00);
 	int zielony = SDL_MapRGB(gameData->screen->format, 0x00, 0xFF, 0x00);
@@ -310,6 +346,8 @@ void draw(Snake* snake, Board* board, GameData* gameData) {
         DrawString(gameData->screen, SCREEN_WIDTH / 2 - 8 * 4, SCREEN_HEIGHT / 2 - 8, "GAME OVER", gameData->charset);
     }
 
+	drawScoreboard(gameData);
+
     drawInfo(gameData->screen, niebieski, czerwony,gameData->points, gameData->worldTime, gameData->fps, gameData->charset, gameData->scrtex, gameData->renderer);
 }
 
@@ -319,6 +357,117 @@ void restartGame(Snake** snake, double& snakeSpeedUnitsPerSeconnd, int& points, 
 	timeElapsed = 0;
 	snakeSpeedUnitsPerSeconnd = SNAKE_SPEED;
 	snakeAlive = true;
+}
+
+
+
+/**
+ * @brief Function sorts an array in ascending order, treating negative numbers as the largest value.
+ *
+ * @param array A pointer to the integer array to be sorted.
+ * @param n The number of elements in the array.
+ */
+void bubbleSort(int* array, int n) {
+	for (int i = 0; i < n - 1; i++) {
+		for (int j = 0; j < n - i - 1; j++) {
+			// Check if both elements are different from -1
+			if (array[j] != -1 && array[j + 1] != -1 && array[j] < array[j + 1]) {
+				// Swap elements
+				int temp = array[j];
+				array[j] = array[j + 1];
+				array[j + 1] = temp;
+			}
+			// If array[j] is -1, do not swap with array[j+1], even if array[j+1] > array[j]
+			else if (array[j] == -1 && array[j + 1] != -1) {
+				// Move -1 to the end of the array
+				int temp = array[j];
+				array[j] = array[j + 1];
+				array[j + 1] = temp;
+			}
+		}
+	}
+}
+
+
+
+/**
+ * @brief Sorts an array and writes the sorted values to a file.
+ * @param file_name The name of the file where the sorted array will be written.
+ * @param array A pointer to the array to be sorted.
+ * @param n The number of elements in the array.
+ */
+void sorted_array_to_file(const char* file_name, int* array, int n) {
+	bubbleSort(array, n + 1);
+
+	FILE* file = fopen(file_name, "w");
+	if (!file) {
+		return;
+	}
+
+	for (int i = 0; i < n; i++) {
+		fprintf(file, "%d\n", array[i]);
+	}
+
+	fclose(file);
+}
+
+
+/**
+ * @brief Reads an array of integers from a file or creates a new file if it doesn't exist.
+ * @param file_name The name of the file to read from or write to.
+ * @param n The number of integers to read into the array.
+ * @return A pointer to the array of integers read from the file or filled with -1 if the file is not found.
+ */
+int* readScores(const char* file_name, int n) {
+	FILE* file = fopen(file_name, "r");
+	int* array = (int*)malloc((n + 1) * sizeof(int));
+
+	if (!array) {
+		return nullptr;
+	}
+
+	if (file) {
+		// File exists, read data
+		int i = 0;
+		while (i < n && fscanf(file, "%d", &array[i]) == 1) {
+			i++;
+		}
+
+		// If not enough data read, fill remaining spaces -1
+		for (int j = i; j < n; j++) {
+			array[j] = -1;
+		}
+
+		// If it doesn't read all the data, save the missing data to a file
+		if (i < n) {
+			file = freopen(file_name, "w", file); // Reset file to write mode
+			if (file) {
+				for (int j = 0; j < n; j++) {
+					fprintf(file, "%d\n", array[j]);
+				}
+			}
+		}
+
+		fclose(file);
+		bubbleSort(array, n);
+	}
+	else {
+		// File does not exist, create new one and fill array -1
+		file = fopen(file_name, "w");
+		if (!file) {
+			free(array);
+			return nullptr;
+		}
+
+		for (int i = 0; i < n; i++) {
+			array[i] = -1;
+			fprintf(file, "%d\n", array[i]);
+		}
+
+		fclose(file);
+	}
+
+	return array;
 }
 
 
@@ -404,6 +553,12 @@ int main(int argc, char **argv) {
 	bool speedUpUsed = false;
 
 	gameData.powerUpActive = false;
+	gameData.scoresTabele = readScores(SCOREBOARD_PATH, SCOREBOARD_SIZE);
+
+	
+    for (int i = 0; i < SCOREBOARD_SIZE; i++) {
+        printf("Score %d: %d\n", i + 1, gameData.scoresTabele[i]);
+    }
 
 	while (!gameData.quit) {
 		gameData.t2 = SDL_GetTicks();
@@ -437,6 +592,8 @@ int main(int argc, char **argv) {
 			if (snake->checkCollision()) {
 				gameData.snakeAlive = false;
 				gameData.snakeSpeedUnitsPerSeconnd = 0;
+				gameData.scoresTabele[SCOREBOARD_SIZE] = gameData.points;
+				sorted_array_to_file(SCOREBOARD_PATH, gameData.scoresTabele, SCOREBOARD_SIZE);
 			}
 		}
 
@@ -472,6 +629,7 @@ int main(int argc, char **argv) {
 				case SDLK_n:
 					if (!gameData.snakeAlive) {
 						restartGame(&snake, gameData.snakeSpeedUnitsPerSeconnd , gameData.points, gameData.snakeAlive, gameData.worldTime);
+						gameData.scoresTabele = readScores(SCOREBOARD_PATH, SCOREBOARD_SIZE);
 					}
 					break;
 				}
