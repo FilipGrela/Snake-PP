@@ -15,14 +15,14 @@ public:
     };
 
     struct Node;
-    Snake(int length, int x, int y, int unitSize, int boardOffsetX, int boardOffsetY); // Constructor declaration
+    Snake(int length, int x, int y, int unitSize, int boardOffsetX, int boardOffsetY, int* pointsVerivle); // Constructor declaration
     ~Snake(); // Destructor declaration
     int getLength() const;
     Directions getDirection() const; // Getter for direction
 
     void move();
     void grow();
-    bool checkCollision(int width, int height) const;
+    bool checkCollision() const;
 	bool checkIfFreeCell(int x, int y);
     void draw_snake(SDL_Surface* screen, Uint32 color);
     void changeDirection(Directions newDirection);
@@ -30,6 +30,7 @@ public:
     Node* getHead() const;
 
 private:
+    int* pointsVerivle;
     int unitSize;
     int length;
     int boardOffsetX;
@@ -49,12 +50,15 @@ struct Snake::Node {
 };
 
 // Constructor definition
-Snake::Snake(int length, int x, int y, int unitSize, int boardOffsetX, int boardOffsetY) :
-    length(length), head(nullptr), unitSize(unitSize), boardOffsetX(boardOffsetX), boardOffsetY(boardOffsetY) {
+Snake::Snake(int length, int x, int y, int unitSize, int boardOffsetX, int boardOffsetY, int* pointsVerivle) :
+    length(length), head(nullptr), unitSize(unitSize), boardOffsetX(boardOffsetX), boardOffsetY(boardOffsetY), pointsVerivle(pointsVerivle) {
     // Initialize the snake with a single segment
     head = new Node(x, y);
 	tail = new Node(x, y - 1);
     head->next_node = tail;
+	*pointsVerivle = 0;
+
+    printf("%d", *pointsVerivle);
 
 	direction = Right;
 	init_snake();
@@ -167,10 +171,7 @@ void Snake::addSegment(int x, int y) {
     tail = newSegment;
 }
 
-bool Snake::checkCollision(int width, int height) const {
-    if (head->x < 0 || head->x >= width || head->y < 0 || head->y >= height) {
-        return true;
-    }
+bool Snake::checkCollision() const {
 
     Node* current = head->next_node;
     while (current != nullptr) {

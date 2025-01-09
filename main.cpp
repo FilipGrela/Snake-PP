@@ -21,6 +21,21 @@ extern "C" {
 
 #define UNIT_SIZE 20
 
+#define SNAKE_SPEED 8 // units per second
+
+struct GameData {
+
+	int t1, t2, quit, frames, rc, points;
+	double delta, worldTime, fpsTimer, fps;
+	bool snakeAlive;
+	SDL_Event event;
+	SDL_Surface* screen, * charset;
+	SDL_Texture* scrtex;
+	SDL_Window* window;
+	SDL_Renderer* renderer;
+	
+};
+
 
 // draw a text txt on surface screen, starting from the point (x, y)
 // charset is a 128x128 bitmap containing character images
@@ -115,7 +130,56 @@ void moveSnake(Snake* snake) {
 	snake->move();
 }
 
+void drawInfo(SDL_Surface* screen, Uint32 color1, Uint32 color2, double worldTime, double fps, SDL_Surface* charset, SDL_Texture* scrtex, SDL_Renderer* renderer) {
+	// info text
+	DrawRectangle(screen, 4, 4, SCREEN_WIDTH - 8, INFO_SCREN_HEIGHT, color1, color2);
+	//            "template for the second project, elapsed time = %.1lf s  %.0lf frames / s"
+	char text[128];
+	sprintf(text, "Szablon drugiego zadania, czas trwania = %.1lf s  %.0lf klatek / s", worldTime, fps);
+	DrawString(screen, screen->w / 2 - strlen(text) * 8 / 2, 10, text, charset);
+	//	      "Esc - exit, \030 - faster, \031 - slower"
+	sprintf(text, "Esc - wyjscie, \030 - przyspieszenie, \031 - zwolnienie");
+	DrawString(screen, screen->w / 2 - strlen(text) * 8 / 2, 26, text, charset);
 
+	SDL_UpdateTexture(scrtex, NULL, screen->pixels, screen->pitch);
+	//		SDL_RenderClear(renderer);
+	SDL_RenderCopy(renderer, scrtex, NULL, NULL);
+	SDL_RenderPresent(renderer);
+}
+
+Snake* getNewSnake(int* pointsVerible) {
+	int snakeOffsetX = (SCREEN_WIDTH - BOARD_WIDTH_UNITS * UNIT_SIZE) / 2;
+	int snakeOffsetY = (SCREEN_HEIGHT - BOARD_HEIGHT_USNITS * UNIT_SIZE) / 2;
+	
+	return new Snake(2, BOARD_WIDTH_UNITS / 2, BOARD_HEIGHT_USNITS / 2, UNIT_SIZE, snakeOffsetX, snakeOffsetY, pointsVerible);
+}
+
+void draw(Snake* snake, Board* board,GameData* gameData) {
+	int czarny = SDL_MapRGB(gameData->screen->format, 0x00, 0x00, 0x00);
+	int zielony = SDL_MapRGB(gameData->screen->format, 0x00, 0xFF, 0x00);
+	int czerwony = SDL_MapRGB(gameData->screen->format, 0xFF, 0x00, 0x00);
+	int niebieski = SDL_MapRGB(gameData->screen->format, 0x11, 0x11, 0xCC);
+	
+
+	SDL_FillRect(gameData->screen, NULL, czarny);
+	board->render(gameData->screen);
+	snake->draw_snake(gameData->screen, niebieski);
+
+
+	if (!gameData->snakeAlive) {
+		DrawString(gameData->screen, SCREEN_WIDTH / 2 - 8 * 4, SCREEN_HEIGHT / 2 - 8, "GAME OVER", gameData->charset);
+	}
+
+
+	drawInfo(gameData->screen, niebieski, czerwony, gameData->worldTime, gameData->fps, gameData->charset, gameData->scrtex, gameData->renderer);
+}
+
+void restartGame(Snake** snake, double& snakeSpeedUnitsPerSeconnd, int& points, bool& snakeAlive) {
+	delete *snake;
+	*snake = getNewSnake(&points);
+	snakeSpeedUnitsPerSeconnd = SNAKE_SPEED;
+	snakeAlive = true;
+}
 
 // main
 #ifdef __cplusplus
@@ -123,55 +187,41 @@ extern "C"
 #endif
 int main(int argc, char **argv) {
 
-	int t1, t2, quit, frames, rc;
-	double delta, worldTime, fpsTimer, fps, distance, etiSpeed;
-	SDL_Event event;
-	SDL_Surface *screen, *charset;
-	SDL_Surface *eti;
-	SDL_Texture *scrtex;
-	SDL_Window *window;
-	SDL_Renderer *renderer;
+	GameData gameData;
 
 
-	Board board = Board(SCREEN_WIDTH, SCREEN_HEIGHT, BOARD_WIDTH_UNITS, BOARD_HEIGHT_USNITS, UNIT_SIZE);
-	int snakeOffsetX = (SCREEN_WIDTH - BOARD_WIDTH_UNITS * UNIT_SIZE) / 2;
-	int snakeOffsetY = (SCREEN_HEIGHT - BOARD_HEIGHT_USNITS * UNIT_SIZE) / 2;
-	Snake snake = Snake(2, BOARD_WIDTH_UNITS/2, BOARD_HEIGHT_USNITS/2, UNIT_SIZE, snakeOffsetX, snakeOffsetY);
 
 	// console window is not visible, to see the printf output
 	// the option:
 	// project -> szablon2 properties -> Linker -> System -> Subsystem
 	// must be changed to "Console"
 	// to remove must be changed to "Native"
-	printf("wyjscie printfa trafia do tego okienka\n");
-	printf("printf output goes here\n");
 
 	if(SDL_Init(SDL_INIT_EVERYTHING) != 0) {
 		printf("SDL_Init error: %s\n", SDL_GetError());
 		return 1;
 		}
 
-//	rc = SDL_CreateWindowAndRenderer(0, 0, SDL_WINDOW_FULLSCREEN_DESKTOP,
-//	                                 &window, &renderer);
-	rc = SDL_CreateWindowAndRenderer(SCREEN_WIDTH, SCREEN_HEIGHT, 0,
-	                                 &window, &renderer);
-	if(rc != 0) {
+	gameData.rc = SDL_CreateWindowAndRenderer(SCREEN_WIDTH, SCREEN_HEIGHT, 0,
+	                                 &gameData.window, &gameData.renderer);
+
+	if(gameData.rc != 0) {
 		SDL_Quit();
 		printf("SDL_CreateWindowAndRenderer error: %s\n", SDL_GetError());
 		return 1;
 		};
 	
 	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
-	SDL_RenderSetLogicalSize(renderer, SCREEN_WIDTH, SCREEN_HEIGHT);
-	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+	SDL_RenderSetLogicalSize(gameData.renderer, SCREEN_WIDTH, SCREEN_HEIGHT);
+	SDL_SetRenderDrawColor(gameData.renderer, 0, 0, 0, 255);
 
-	SDL_SetWindowTitle(window, "Szablon do zdania drugiego 2017");
+	SDL_SetWindowTitle(gameData.window, "Snake Filip Grela 203850");
 
 
-	screen = SDL_CreateRGBSurface(0, SCREEN_WIDTH, SCREEN_HEIGHT, 32,
+	gameData.screen = SDL_CreateRGBSurface(0, SCREEN_WIDTH, SCREEN_HEIGHT, 32,
 	                              0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
 
-	scrtex = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888,
+	gameData.scrtex = SDL_CreateTexture(gameData.renderer, SDL_PIXELFORMAT_ARGB8888,
 	                           SDL_TEXTUREACCESS_STREAMING,
 	                           SCREEN_WIDTH, SCREEN_HEIGHT);
 
@@ -180,127 +230,113 @@ int main(int argc, char **argv) {
 	SDL_ShowCursor(SDL_DISABLE);
 
 	// load image cs8x8.bmp
-	charset = SDL_LoadBMP("./cs8x8.bmp");
-	if(charset == NULL) {
+	gameData.charset = SDL_LoadBMP("./cs8x8.bmp");
+	if(gameData.charset == NULL) {
 		printf("SDL_LoadBMP(cs8x8.bmp) error: %s\n", SDL_GetError());
-		SDL_FreeSurface(screen);
-		SDL_DestroyTexture(scrtex);
-		SDL_DestroyWindow(window);
-		SDL_DestroyRenderer(renderer);
+		SDL_FreeSurface(gameData.screen);
+		SDL_DestroyTexture(gameData.scrtex);
+		SDL_DestroyWindow(gameData.window);
+		SDL_DestroyRenderer(gameData.renderer);
 		SDL_Quit();
 		return 1;
 		};
-	SDL_SetColorKey(charset, true, 0x000000);
+	SDL_SetColorKey(gameData.charset, true, 0x000000);
 
-	char text[128];
-	int czarny = SDL_MapRGB(screen->format, 0x00, 0x00, 0x00);
-	int zielony = SDL_MapRGB(screen->format, 0x00, 0xFF, 0x00);
-	int czerwony = SDL_MapRGB(screen->format, 0xFF, 0x00, 0x00);
-	int niebieski = SDL_MapRGB(screen->format, 0x11, 0x11, 0xCC);
+	gameData.t1 = SDL_GetTicks();
 
-	t1 = SDL_GetTicks();
+	gameData.frames = 0;
+	gameData.fpsTimer = 60;
+	gameData.fps = 0;
+	gameData.quit = 0;
+	gameData.worldTime = 0;
 
-	frames = 0;
-	fpsTimer = 60;
-	fps = 0;
-	quit = 0;
-	worldTime = 0;
-	distance = 0;
-	etiSpeed = 1;
-
-	double snakeSpeedUnitsPerSeconnd = 8;
+	double snakeSpeedUnitsPerSeconnd = SNAKE_SPEED;
 	double lastSnakeUpdate = 0;
+	gameData.snakeAlive = true;
 
-	while (!quit) {
-		t2 = SDL_GetTicks();
+
+	Board board = Board(SCREEN_WIDTH, SCREEN_HEIGHT, BOARD_WIDTH_UNITS, BOARD_HEIGHT_USNITS, UNIT_SIZE);
+	Snake* snake = getNewSnake(&gameData.points);
+
+	while (!gameData.quit) {
+		gameData.t2 = SDL_GetTicks();
 
 		// here t2-t1 is the time in milliseconds since
 		// the last screen was drawn
 		// delta is the same time in seconds
-		delta = (t2 - t1) * 0.001;
-		t1 = t2;
+		gameData.delta = (gameData.t2 - gameData.t1) * 0.001;
+		gameData.t1 = gameData.t2;
 
-		worldTime += delta;
+		gameData.worldTime += gameData.delta;
 
-		distance += etiSpeed * delta;
 
-		SDL_FillRect(screen, NULL, czarny);
-
-		fpsTimer += delta;
-		if (fpsTimer > 0.5) {
-			fps = frames * 2;
-			frames = 0;
-			fpsTimer -= 0.5;
+		gameData.fpsTimer += gameData.delta;
+		if (gameData.fpsTimer > 0.5) {
+			gameData.fps = gameData.frames * 2;
+			gameData.frames = 0;
+			gameData.fpsTimer -= 0.5;
 		};
 
 
-		board.render(screen);
-		snake.draw_snake(screen, niebieski);
-		lastSnakeUpdate += delta;
-		if (lastSnakeUpdate >= 1/snakeSpeedUnitsPerSeconnd)
-		{	
+		
+		lastSnakeUpdate += gameData.delta;
+		if (lastSnakeUpdate >= 1 / snakeSpeedUnitsPerSeconnd)
+		{
 			lastSnakeUpdate = 0;
-			moveSnake(&snake);
+			moveSnake(snake);
+			if (snake->checkCollision()) {
+				gameData.snakeAlive = false;
+				snakeSpeedUnitsPerSeconnd = 0;
+			}
 		}
-
-		// info text
-		DrawRectangle(screen, 4, 4, SCREEN_WIDTH - 8, INFO_SCREN_HEIGHT, czerwony, niebieski);
-		//            "template for the second project, elapsed time = %.1lf s  %.0lf frames / s"
-		sprintf(text, "Szablon drugiego zadania, czas trwania = %.1lf s  %.0lf klatek / s", worldTime, fps);
-		DrawString(screen, screen->w / 2 - strlen(text) * 8 / 2, 10, text, charset);
-		//	      "Esc - exit, \030 - faster, \031 - slower"
-		sprintf(text, "Esc - wyjscie, \030 - przyspieszenie, \031 - zwolnienie");
-		DrawString(screen, screen->w / 2 - strlen(text) * 8 / 2, 26, text, charset);
-
-		SDL_UpdateTexture(scrtex, NULL, screen->pixels, screen->pitch);
-		//		SDL_RenderClear(renderer);
-		SDL_RenderCopy(renderer, scrtex, NULL, NULL);
-		SDL_RenderPresent(renderer);
-
-
-
-
+		
+		draw(snake, &board, &gameData);
 		// handling of events (if there were any)
-		while (SDL_PollEvent(&event)) {
-			switch (event.type) {
+		while (SDL_PollEvent(&gameData.event)) {
+			switch (gameData.event.type) {
 			case SDL_KEYDOWN:
-				switch (event.key.keysym.sym) {
+				switch (gameData.event.key.keysym.sym) {
 				case SDLK_ESCAPE:
-					quit = 1;
+					gameData.quit = 1;
 					break;
 				case SDLK_UP:
-					snake.changeDirection(Snake::Up);
+					snake->changeDirection(Snake::Up);
 					break;
 				case SDLK_DOWN:
-					snake.changeDirection(Snake::Down);
+					snake->changeDirection(Snake::Down);
 					break;
 				case SDLK_LEFT:
-					snake.changeDirection(Snake::Left);
+					snake->changeDirection(Snake::Left);
 					break;
 				case SDLK_RIGHT:
-					snake.changeDirection(Snake::Right);
+					snake->changeDirection(Snake::Right);
 					break;
 				case SDLK_w:
-					snake.grow();
+					snake->grow();
+					break;
+				case SDLK_n:
+					if (!gameData.snakeAlive) {
+						restartGame(&snake, snakeSpeedUnitsPerSeconnd, gameData.points, gameData.snakeAlive);
+					}
 					break;
 				}
 				break;
 			case SDL_KEYUP:
 				break;
 			case SDL_QUIT:
-				quit = 1;
+				gameData.quit = 1;
 				break;
 			}
 
-			frames++;
+			gameData.frames++;
 		};
 	}
 	// freeing all surfaces
-	SDL_FreeSurface(charset);
-	SDL_FreeSurface(screen);
-	SDL_DestroyTexture(scrtex);
-	SDL_DestroyRenderer(renderer);
-	SDL_DestroyWindow(window);
+	SDL_FreeSurface(gameData.charset);
+	SDL_FreeSurface(gameData.screen);
+	SDL_DestroyTexture(gameData.scrtex);
+	SDL_DestroyRenderer(gameData.renderer);
+	SDL_DestroyWindow(gameData.window);
 
 	SDL_Quit();
 	return 0;
