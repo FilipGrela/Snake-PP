@@ -5,22 +5,34 @@ extern "C" {
 
 class Board {
 public:
-    Board(int screenWidth, int screenHeight, int width, int height, int unitSize);
-    void render(SDL_Surface* surface);
+	Board(int screenWidth, int screenHeight, int width, int height, int unitSize);
+	void render(SDL_Surface* surface);
 
 private:
 	int unitSize;
-    int width, height;
-    SDL_Rect boardRect;
+	int width, height;
+	SDL_Rect boardRect;
 };
 
-Board::Board( int screenWidth, int screenHeight, int width, int height, int unitSize) : width(width), height(height), unitSize(unitSize){
-	int height_px = height * unitSize;
-	int width_px = width * unitSize;
-    boardRect = {(screenWidth - width_px) / 2, (screenHeight - height_px) / 2, width_px, height_px };
+/**
+ * @brief Constructor for the Board class.
+ * @param screenWidth The width of the screen.
+ * @param screenHeight The height of the screen.
+ * @param width The width of the board in units.
+ * @param height The height of the board in units.
+ * @param unitSize The size of each unit on the board.
+ */
+Board::Board(int screenWidth, int screenHeight, int width, int height, int unitSize) : width(width), height(height), unitSize(unitSize) {
+	int heightPx = height * unitSize;
+	int widthPx = width * unitSize;
+	boardRect = { (screenWidth - widthPx) / 2, (screenHeight - heightPx) / 2, widthPx, heightPx };
 }
 
+/**
+ * @brief Renders the board on the given surface.
+ * @param surface The SDL_Surface to render the board on.
+ */
 void Board::render(SDL_Surface* surface) {
-    Uint32 green = SDL_MapRGB(surface->format, 0, 255, 0); // Green color
-    SDL_FillRect(surface, &boardRect, green);
+	Uint32 green = SDL_MapRGB(surface->format, 0, 255, 0); // Green color
+	SDL_FillRect(surface, &boardRect, green);
 }
