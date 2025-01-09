@@ -14,14 +14,14 @@ extern "C" {
 #include"./SDL2-2.0.10/include/SDL_main.h"
 } 
 
-#define SCREEN_WIDTH	640
-#define SCREEN_HEIGHT	540
+#define SCREEN_WIDTH	820
+#define SCREEN_HEIGHT	640
 #define INFO_SCREN_HEIGHT 36
 
 #define SCOREBOARD_PATH "scoreboard.txt"
 #define SCOREBOARD_SIZE 10
 
-#define BOARD_WIDTH_UNITS 20
+#define BOARD_WIDTH_UNITS 30
 #define BOARD_HEIGHT_USNITS 20
 
 #define UNIT_SIZE 20
@@ -46,8 +46,8 @@ struct Food {
 };
 
 struct GameData {
-    int t1, t2, quit, frames, rc, points;
-    double delta, worldTime, fpsTimer, fps, snakeSpeedUnitsPerSeconnd;
+    int t1, t2, quit, rc, points;
+    double delta, worldTime, snakeSpeedUnitsPerSeconnd;
 	double powerUpActivationTime = NULL;
     bool snakeAlive;
 	bool powerUpActive;
@@ -142,21 +142,19 @@ void DrawRectangle(SDL_Surface *screen, int x, int y, int l, int k,
 
 
 void placeFood(Food& food, bool powerUp, SDL_PixelFormat* format, Snake* snake) {
-
-	int x = get_random_number(0, BOARD_WIDTH_UNITS - 1);
-	int y = get_random_number(0, BOARD_HEIGHT_USNITS - 1);
-	while (!snake->checkIfFreeCell(x, y)) {
+	int x, y;
+	do {
 		x = get_random_number(0, BOARD_WIDTH_UNITS - 1);
 		y = get_random_number(0, BOARD_HEIGHT_USNITS - 1);
-	}
+	} while (!snake->checkIfFreeCell(x, y));
 
 	food = Food();
 	food.x = x;
 	food.y = y;
 	food.powerUp = powerUp;
-
 	food.color = powerUp ? SDL_MapRGB(format, 0xFF, 0x00, 0xFF) : SDL_MapRGB(format, 0xFF, 0x00, 0x00);
 }
+
 
 void handlePowerUp(GameData* gameData, Snake* snake) {
 	if (get_random_number(0, 1) == 0) {
@@ -228,7 +226,7 @@ void moveSnake(Snake* snake, GameData* gameData) {
 	checkFoodCollision(snake, gameData);
 }
 
-void drawInfo(SDL_Surface* screen, Uint32 color1, Uint32 color2, int points, double worldTime, double fps, SDL_Surface* charset, SDL_Texture* scrtex, SDL_Renderer* renderer) {
+void drawInfo(SDL_Surface* screen, Uint32 color1, Uint32 color2, int points, double worldTime, SDL_Surface* charset, SDL_Texture* scrtex, SDL_Renderer* renderer) {
 	// info text
 	DrawRectangle(screen, 4, 4, SCREEN_WIDTH - 8, INFO_SCREN_HEIGHT, color1, color2);
 	char text[128];
@@ -238,7 +236,7 @@ void drawInfo(SDL_Surface* screen, Uint32 color1, Uint32 color2, int points, dou
 	sprintf(text, "Esc - wyjscie, n - nowa gra, \032 \030 \033 \031 - sterowanie");
 	DrawString(screen, screen->w / 2 - strlen(text) * 8 / 2, 20, text, charset);
 	
-	sprintf(text, "Wymagania: 1-4,");
+	sprintf(text, "Wymagania: 1-4, A, B, C, D, F");
 	DrawString(screen, screen->w / 2 - strlen(text) * 8 / 2, 30, text, charset);
 
 	SDL_UpdateTexture(scrtex, NULL, screen->pixels, screen->pitch);
@@ -348,7 +346,7 @@ void draw(Snake* snake, Board* board, GameData* gameData) {
 
 	drawScoreboard(gameData);
 
-    drawInfo(gameData->screen, niebieski, czerwony,gameData->points, gameData->worldTime, gameData->fps, gameData->charset, gameData->scrtex, gameData->renderer);
+    drawInfo(gameData->screen, niebieski, czerwony,gameData->points, gameData->worldTime, gameData->charset, gameData->scrtex, gameData->renderer);
 }
 
 void restartGame(Snake** snake, double& snakeSpeedUnitsPerSeconnd, int& points, bool& snakeAlive, double& timeElapsed) {
@@ -470,6 +468,95 @@ int* readScores(const char* file_name, int n) {
 	return array;
 }
 
+int initSDL(GameData& gameData) {
+	if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
+		printf("SDL_Init error: %s\n", SDL_GetError());
+		return 1;
+	}
+
+	gameData.rc = SDL_CreateWindowAndRenderer(SCREEN_WIDTH, SCREEN_HEIGHT, 0,
+		&gameData.window, &gameData.renderer);
+
+	if (gameData.rc != 0) {
+		SDL_Quit();
+		printf("SDL_CreateWindowAndRenderer error: %s\n", SDL_GetError());
+		return 1;
+	};
+
+	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
+	SDL_RenderSetLogicalSize(gameData.renderer, SCREEN_WIDTH, SCREEN_HEIGHT);
+	SDL_SetRenderDrawColor(gameData.renderer, 0, 0, 0, 255);
+
+	SDL_SetWindowTitle(gameData.window, "Snake Filip Grela 203850");
+
+
+	gameData.screen = SDL_CreateRGBSurface(0, SCREEN_WIDTH, SCREEN_HEIGHT, 32,
+		0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
+
+	gameData.scrtex = SDL_CreateTexture(gameData.renderer, SDL_PIXELFORMAT_ARGB8888,
+		SDL_TEXTUREACCESS_STREAMING,
+		SCREEN_WIDTH, SCREEN_HEIGHT);
+
+
+	// disabling mouse cursor visibility
+	SDL_ShowCursor(SDL_DISABLE);
+
+	// load image cs8x8.bmp
+	gameData.charset = SDL_LoadBMP("./cs8x8.bmp");
+	if (gameData.charset == NULL) {
+		printf("SDL_LoadBMP(cs8x8.bmp) error: %s\n", SDL_GetError());
+		SDL_FreeSurface(gameData.screen);
+		SDL_DestroyTexture(gameData.scrtex);
+		SDL_DestroyWindow(gameData.window);
+		SDL_DestroyRenderer(gameData.renderer);
+		SDL_Quit();
+		return 1;
+	};
+	SDL_SetColorKey(gameData.charset, true, 0x000000);
+
+	gameData.t1 = SDL_GetTicks();
+
+	gameData.quit = 0;
+	gameData.worldTime = 0;
+	return 0;
+}
+
+void handleControls(GameData& gameData, Snake* snake) {
+	while (SDL_PollEvent(&gameData.event)) {
+		switch (gameData.event.type) {
+		case SDL_KEYDOWN:
+			switch (gameData.event.key.keysym.sym) {
+			case SDLK_ESCAPE:
+				gameData.quit = 1;
+				break;
+			case SDLK_UP:
+				snake->changeDirection(Snake::Up);
+				break;
+			case SDLK_DOWN:
+				snake->changeDirection(Snake::Down);
+				break;
+			case SDLK_LEFT:
+				snake->changeDirection(Snake::Left);
+				break;
+			case SDLK_RIGHT:
+				snake->changeDirection(Snake::Right);
+				break;
+			case SDLK_n:
+				if (!gameData.snakeAlive) {
+					restartGame(&snake, gameData.snakeSpeedUnitsPerSeconnd, gameData.points, gameData.snakeAlive, gameData.worldTime);
+					gameData.scoresTabele = readScores(SCOREBOARD_PATH, SCOREBOARD_SIZE);
+				}
+				break;
+			}
+			break;
+		case SDL_KEYUP:
+			break;
+		case SDL_QUIT:
+			gameData.quit = 1;
+			break;
+		}
+	};
+}
 
 // main
 #ifdef __cplusplus
@@ -479,66 +566,14 @@ int main(int argc, char **argv) {
 
 	GameData gameData;
 
-
-
 	// console window is not visible, to see the printf output
 	// the option:
 	// project -> szablon2 properties -> Linker -> System -> Subsystem
 	// must be changed to "Console"
 	// to remove must be changed to "Native"
 
-	if(SDL_Init(SDL_INIT_EVERYTHING) != 0) {
-		printf("SDL_Init error: %s\n", SDL_GetError());
+	if (initSDL(gameData))
 		return 1;
-		}
-
-	gameData.rc = SDL_CreateWindowAndRenderer(SCREEN_WIDTH, SCREEN_HEIGHT, 0,
-	                                 &gameData.window, &gameData.renderer);
-
-	if(gameData.rc != 0) {
-		SDL_Quit();
-		printf("SDL_CreateWindowAndRenderer error: %s\n", SDL_GetError());
-		return 1;
-		};
-	
-	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
-	SDL_RenderSetLogicalSize(gameData.renderer, SCREEN_WIDTH, SCREEN_HEIGHT);
-	SDL_SetRenderDrawColor(gameData.renderer, 0, 0, 0, 255);
-
-	SDL_SetWindowTitle(gameData.window, "Snake Filip Grela 203850");
-
-
-	gameData.screen = SDL_CreateRGBSurface(0, SCREEN_WIDTH, SCREEN_HEIGHT, 32,
-	                              0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
-
-	gameData.scrtex = SDL_CreateTexture(gameData.renderer, SDL_PIXELFORMAT_ARGB8888,
-	                           SDL_TEXTUREACCESS_STREAMING,
-	                           SCREEN_WIDTH, SCREEN_HEIGHT);
-
-
-    // disabling mouse cursor visibility
-	SDL_ShowCursor(SDL_DISABLE);
-
-	// load image cs8x8.bmp
-	gameData.charset = SDL_LoadBMP("./cs8x8.bmp");
-	if(gameData.charset == NULL) {
-		printf("SDL_LoadBMP(cs8x8.bmp) error: %s\n", SDL_GetError());
-		SDL_FreeSurface(gameData.screen);
-		SDL_DestroyTexture(gameData.scrtex);
-		SDL_DestroyWindow(gameData.window);
-		SDL_DestroyRenderer(gameData.renderer);
-		SDL_Quit();
-		return 1;
-		};
-	SDL_SetColorKey(gameData.charset, true, 0x000000);
-
-	gameData.t1 = SDL_GetTicks();
-
-	gameData.frames = 0;
-	gameData.fpsTimer = 60;
-	gameData.fps = 0;
-	gameData.quit = 0;
-	gameData.worldTime = 0;
 
 	double lastSnakeUpdate = 0;
 	gameData.snakeSpeedUnitsPerSeconnd = SNAKE_SPEED;
@@ -569,14 +604,9 @@ int main(int argc, char **argv) {
 		gameData.delta = (gameData.t2 - gameData.t1) * 0.001;
 		gameData.t1 = gameData.t2;
 
-		gameData.worldTime += gameData.delta;
-
-
-		if (gameData.fpsTimer > 0.5) {
-			gameData.fps = gameData.frames * 2;
-			gameData.frames = 0;
-			gameData.fpsTimer -= 0.5;
-		};
+		if (gameData.snakeAlive) {
+			gameData.worldTime += gameData.delta;
+		}
 
 		
 		if (!speedUpUsed && gameData.worldTime >= SNAKE_SPEEDUP) {
@@ -604,46 +634,10 @@ int main(int argc, char **argv) {
 		
 		draw(snake, &board, &gameData);
 		// handling of events (if there were any)
-		while (SDL_PollEvent(&gameData.event)) {
-			switch (gameData.event.type) {
-			case SDL_KEYDOWN:
-				switch (gameData.event.key.keysym.sym) {
-				case SDLK_ESCAPE:
-					gameData.quit = 1;
-					break;
-				case SDLK_UP:
-					snake->changeDirection(Snake::Up);
-					break;
-				case SDLK_DOWN:
-					snake->changeDirection(Snake::Down);
-					break;
-				case SDLK_LEFT:
-					snake->changeDirection(Snake::Left);
-					break;
-				case SDLK_RIGHT:
-					snake->changeDirection(Snake::Right);
-					break;
-				case SDLK_w:
-					snake->grow();
-					break;
-				case SDLK_n:
-					if (!gameData.snakeAlive) {
-						restartGame(&snake, gameData.snakeSpeedUnitsPerSeconnd , gameData.points, gameData.snakeAlive, gameData.worldTime);
-						gameData.scoresTabele = readScores(SCOREBOARD_PATH, SCOREBOARD_SIZE);
-					}
-					break;
-				}
-				break;
-			case SDL_KEYUP:
-				break;
-			case SDL_QUIT:
-				gameData.quit = 1;
-				break;
-			}
-
-			gameData.frames++;
-		};
+		handleControls(gameData, snake);
 	}
+
+	delete snake;
 	// freeing all surfaces
 	SDL_FreeSurface(gameData.charset);
 	SDL_FreeSurface(gameData.screen);
@@ -653,4 +647,4 @@ int main(int argc, char **argv) {
 
 	SDL_Quit();
 	return 0;
-	};
+};
