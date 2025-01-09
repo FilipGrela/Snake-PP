@@ -19,6 +19,7 @@ public:
 	~Snake(); // Destructor declaration
 	int getLength() const;
 	Directions getDirection() const; // Getter for direction
+	Directions getNextDirection() const; // Getter for direction
 
 	void move();
 	void grow();
@@ -39,6 +40,7 @@ private:
 	Node* tail;
 	Node* head;
 	Directions direction;
+	Directions nextDirection;
 	void addSegment(int x, int y);
 	void initSnake();
 };
@@ -88,6 +90,7 @@ Snake::~Snake() {
 
 void Snake::initSnake() {
 	int length = getLength(); // Example length, replace with actual length if available
+	this->nextDirection = this->direction;
 	printf("Length: %d\n", getLength());
 	for (size_t i = 0; i < length - 1; i++) {
 		grow();
@@ -112,7 +115,7 @@ void Snake::changeDirection(Directions newDirection) {
 		(direction == Down && newDirection != Up) ||
 		(direction == Left && newDirection != Right) ||
 		(direction == Right && newDirection != Left)) {
-		direction = newDirection;
+		nextDirection = newDirection;
 	}
 }
 
@@ -140,6 +143,7 @@ void Snake::drawSnake(SDL_Surface* screen, Uint32 color) {
 void Snake::move() {
 	double dx = 0;
 	double dy = 0;
+	direction = nextDirection;
 	if (direction == Up) {
 		dy = -1;
 	}
@@ -267,5 +271,9 @@ int Snake::getLength() const {
 
 Snake::Directions Snake::getDirection() const {
 	return direction;
+}
+
+Snake::Directions Snake::getNextDirection() const {
+	return nextDirection;
 }
 

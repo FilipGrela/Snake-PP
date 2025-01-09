@@ -258,30 +258,37 @@ void checkFoodCollision(Snake* snake, GameData* gameData) {
 void moveSnake(Snake* snake, GameData* gameData) {
 	int headX = snake->getHead()->x;
 	int headY = snake->getHead()->y;
-	Snake::Directions direction = snake->getDirection();
+	Snake::Directions nextDirection = snake->getNextDirection();
 
-	if (headX <= 0 && direction == Snake::Left) {
+	// Check if the snake's head is at the left edge and moving left
+	if (headX <= 0 && nextDirection == Snake::Left) {
 		snake->changeDirection(
 			(snake->checkIfFreeCell(headX, headY - 1) && headY != 0) ? Snake::Up : Snake::Down);
 	}
-	else if (headX >= BOARD_WIDTH_UNITS - 1 && direction == Snake::Right) {
+	// Check if the snake's head is at the right edge and moving right
+	else if (headX >= BOARD_WIDTH_UNITS - 1 && nextDirection == Snake::Right) {
 		snake->changeDirection(
 			(snake->checkIfFreeCell(headX, headY + 1) && headY != BOARD_HEIGHT_USNITS - 1) ? Snake::Down : Snake::Up);
 	}
-	else if (headY <= 0 && direction == Snake::Up) {
+	// Check if the snake's head is at the top edge and moving up
+	else if (headY <= 0 && nextDirection == Snake::Up) {
 		snake->changeDirection(
 			(snake->checkIfFreeCell(headX + 1, headY) && headX != BOARD_WIDTH_UNITS - 1) ? Snake::Right : Snake::Left);
 	}
-	else if (headY >= BOARD_HEIGHT_USNITS - 1 && direction == Snake::Down) {
+	// Check if the snake's head is at the bottom edge and moving down
+	else if (headY >= BOARD_HEIGHT_USNITS - 1 && nextDirection == Snake::Down) {
 		snake->changeDirection(
 			(snake->checkIfFreeCell(headX - 1, headY) && headX != 0) ? Snake::Left : Snake::Right);
 	}
 
-
+	// Move the snake in the current direction
 	snake->move();
 
+	// Check for collisions with food
 	checkFoodCollision(snake, gameData);
 }
+
+
 
 /**
  * @brief Draws game information on the screen.
@@ -640,18 +647,25 @@ void handleControls(GameData& gameData, Snake* snake) {
 				gameData.quit = 1;
 				break;
 			case SDLK_UP:
-				snake->changeDirection(Snake::Up);
+				if (snake->getHead()->y > 0) { // Check if not at the top edge
+					snake->changeDirection(Snake::Up);
+				}
 				break;
 			case SDLK_DOWN:
-				snake->changeDirection(Snake::Down);
+				if (snake->getHead()->y < BOARD_HEIGHT_USNITS - 1) { // Check if not at the bottom edge
+					snake->changeDirection(Snake::Down);
+				}
 				break;
 			case SDLK_LEFT:
-				snake->changeDirection(Snake::Left);
+				if (snake->getHead()->x > 0) { // Check if not at the left edge
+					snake->changeDirection(Snake::Left);
+				}
 				break;
 			case SDLK_RIGHT:
-				snake->changeDirection(Snake::Right);
+				if (snake->getHead()->x < BOARD_WIDTH_UNITS - 1) { // Check if not at the right edge
+					snake->changeDirection(Snake::Right);
+				}
 				break;
-			case SDLK_n:
 				if (!gameData.snakeAlive) {
 					restartGame(&snake, gameData.snakeSpeedUnitsPerSeconnd, gameData.points, gameData.snakeAlive, gameData.worldTime);
 					gameData.scoresTabele = readScores(SCOREBOARD_PATH, SCOREBOARD_SIZE);
