@@ -2,6 +2,8 @@
 #include<math.h>
 #include<stdio.h>
 #include<string.h>
+#include<stdlib.h>
+#include<time.h>
 
 #include"Snake.h"
 #include"Board.h"
@@ -22,20 +24,47 @@ extern "C" {
 #define UNIT_SIZE 20
 
 #define SNAKE_SPEED 8 // units per second
+#define SNAKE_INITIAL_LENGTH 3 // initial length of the snake
+#define SNAKE_MINIMUM_SPEED 6 // minimum speed of the snake
+#define SNAKE_SPEEDUP 10 // time after which the snake speeds up in seconds
+#define SNAKE_SPEEDUP_FACTOR 1.2 // factor by which the snake speeds up
 
-struct GameData {
+#define POWER_UP_TIME 5 // time after which the power up disappears in seconds
+#define POWER_UP_PROBABILITY 50 // probability of a power up appearing
+#define POWER_UP_SLOWDOWN_FACTOR 0.1 // factor by which the snake slows down when power up is eaten
+#define POWER_UP_SHORTEN_UNITS 5 // number of units by which the snake shortens when power up is eaten
 
-	int t1, t2, quit, frames, rc, points;
-	double delta, worldTime, fpsTimer, fps;
-	bool snakeAlive;
-	SDL_Event event;
-	SDL_Surface* screen, * charset;
-	SDL_Texture* scrtex;
-	SDL_Window* window;
-	SDL_Renderer* renderer;
-	
+
+
+struct Food {
+	int x, y;
+	bool powerUp;
+	int color;
 };
 
+struct GameData {
+    int t1, t2, quit, frames, rc, points;
+    double delta, worldTime, fpsTimer, fps, snakeSpeedUnitsPerSeconnd;
+    bool snakeAlive;
+	bool powerUpActive;
+    SDL_Event event;
+    SDL_Surface* screen, * charset;
+    SDL_Texture* scrtex;
+    SDL_Window* window;
+    SDL_Renderer* renderer;
+
+	Food food;
+	Food foodPowerUp;
+};
+
+
+
+/**
+ * @return random numebr in range (min to max)
+ */
+int get_random_number(int min, int max) {
+	return rand() % (max + 1 - min) + min;
+}
 
 // draw a text txt on surface screen, starting from the point (x, y)
 // charset is a 128x128 bitmap containing character images
@@ -59,7 +88,7 @@ void DrawString(SDL_Surface *screen, int x, int y, const char *text,
 		x += 8;
 		text++;
 		};
-	};
+};
 
 
 // draw a surface sprite on a surface screen in point (x, y)
@@ -102,9 +131,67 @@ void DrawRectangle(SDL_Surface *screen, int x, int y, int l, int k,
 	DrawLine(screen, x, y + k - 1, l, 1, 0, outlineColor);
 	for(i = y + 1; i < y + k - 1; i++)
 		DrawLine(screen, x + 1, i, l - 2, 1, 0, fillColor);
-	};
+};
 
-void moveSnake(Snake* snake) {
+
+void placeFood(Food& food, bool powerUp, SDL_PixelFormat* format, Snake* snake) {
+
+	int x = get_random_number(0, BOARD_WIDTH_UNITS - 1);
+	int y = get_random_number(0, BOARD_HEIGHT_USNITS - 1);
+	while (!snake->checkIfFreeCell(x, y)) {
+		x = get_random_number(0, BOARD_WIDTH_UNITS - 1);
+		y = get_random_number(0, BOARD_HEIGHT_USNITS - 1);
+	}
+
+	food = Food();
+	food.x = x;
+	food.y = y;
+	food.powerUp = powerUp;
+
+	food.color = powerUp ? SDL_MapRGB(format, 0xFF, 0x00, 0xFF) : SDL_MapRGB(format, 0xFF, 0x00, 0x00);
+}
+
+void handlePowerUp(GameData* gameData, Snake* snake) {
+	if (get_random_number(0, 1) == 0) {
+		gameData->snakeSpeedUnitsPerSeconnd *= POWER_UP_SLOWDOWN_FACTOR;
+		if (gameData->snakeSpeedUnitsPerSeconnd < SNAKE_MINIMUM_SPEED) {
+			gameData->snakeSpeedUnitsPerSeconnd = SNAKE_MINIMUM_SPEED;
+		}
+	}
+	else {
+		if (SNAKE_INITIAL_LENGTH < snake->getLength() - POWER_UP_SHORTEN_UNITS) {
+			snake->shorten(POWER_UP_SHORTEN_UNITS);
+		}
+		else {
+			snake->shorten(snake->getLength() - SNAKE_INITIAL_LENGTH);
+		}
+	}
+}
+
+void checkFoodCollision(Snake* snake, GameData* gameData) {
+	Food foods[] = { gameData->food, gameData->foodPowerUp };
+	for (Food& food : foods) {
+		if (snake->getHead()->x == food.x && snake->getHead()->y == food.y) {
+			if (!food.powerUp) {
+				snake->grow();
+				gameData->points += 10;
+				placeFood(gameData->food, false, gameData->screen->format, snake);
+				int probability = get_random_number(0, 100);
+				if (probability <= POWER_UP_PROBABILITY && !gameData->powerUpActive) {
+					gameData->powerUpActive = true;
+					placeFood(gameData->foodPowerUp, true, gameData->screen->format, snake);
+				}
+			}
+			else {
+				handlePowerUp(gameData, snake);
+				gameData->powerUpActive = false;
+
+			}
+		}
+	}
+}
+
+void moveSnake(Snake* snake, GameData* gameData) {
 	int headX = snake->getHead()->x;
 	int headY = snake->getHead()->y;
 	Snake::Directions direction = snake->getDirection();
@@ -128,6 +215,8 @@ void moveSnake(Snake* snake) {
 
 
 	snake->move();
+
+	checkFoodCollision(snake, gameData);
 }
 
 void drawInfo(SDL_Surface* screen, Uint32 color1, Uint32 color2, double worldTime, double fps, SDL_Surface* charset, SDL_Texture* scrtex, SDL_Renderer* renderer) {
@@ -135,11 +224,14 @@ void drawInfo(SDL_Surface* screen, Uint32 color1, Uint32 color2, double worldTim
 	DrawRectangle(screen, 4, 4, SCREEN_WIDTH - 8, INFO_SCREN_HEIGHT, color1, color2);
 	//            "template for the second project, elapsed time = %.1lf s  %.0lf frames / s"
 	char text[128];
-	sprintf(text, "Szablon drugiego zadania, czas trwania = %.1lf s  %.0lf klatek / s", worldTime, fps);
-	DrawString(screen, screen->w / 2 - strlen(text) * 8 / 2, 10, text, charset);
+	sprintf(text, "Czas trwania = %.1lf s", worldTime);
+	DrawString(screen, screen->w / 2 - strlen(text) * 8 / 2, 8, text, charset);
 	//	      "Esc - exit, \030 - faster, \031 - slower"
-	sprintf(text, "Esc - wyjscie, \030 - przyspieszenie, \031 - zwolnienie");
-	DrawString(screen, screen->w / 2 - strlen(text) * 8 / 2, 26, text, charset);
+	sprintf(text, "Esc - wyjscie, n - nowa gra, \032 \030 \033 \031 - sterowanie");
+	DrawString(screen, screen->w / 2 - strlen(text) * 8 / 2, 20, text, charset);
+	
+	sprintf(text, "Wymagania: 1-4,");
+	DrawString(screen, screen->w / 2 - strlen(text) * 8 / 2, 30, text, charset);
 
 	SDL_UpdateTexture(scrtex, NULL, screen->pixels, screen->pitch);
 	//		SDL_RenderClear(renderer);
@@ -150,36 +242,65 @@ void drawInfo(SDL_Surface* screen, Uint32 color1, Uint32 color2, double worldTim
 Snake* getNewSnake(int* pointsVerible) {
 	int snakeOffsetX = (SCREEN_WIDTH - BOARD_WIDTH_UNITS * UNIT_SIZE) / 2;
 	int snakeOffsetY = (SCREEN_HEIGHT - BOARD_HEIGHT_USNITS * UNIT_SIZE) / 2;
-	
-	return new Snake(2, BOARD_WIDTH_UNITS / 2, BOARD_HEIGHT_USNITS / 2, UNIT_SIZE, snakeOffsetX, snakeOffsetY, pointsVerible);
+
+	return new Snake(SNAKE_INITIAL_LENGTH, BOARD_WIDTH_UNITS / 2, BOARD_HEIGHT_USNITS / 2, UNIT_SIZE, snakeOffsetX, snakeOffsetY, pointsVerible);
 }
 
-void draw(Snake* snake, Board* board,GameData* gameData) {
-	int czarny = SDL_MapRGB(gameData->screen->format, 0x00, 0x00, 0x00);
-	int zielony = SDL_MapRGB(gameData->screen->format, 0x00, 0xFF, 0x00);
-	int czerwony = SDL_MapRGB(gameData->screen->format, 0xFF, 0x00, 0x00);
-	int niebieski = SDL_MapRGB(gameData->screen->format, 0x11, 0x11, 0xCC);
-	
+void drawFood(SDL_Surface* screen, Food food) {
+	// Calculate board padding
+	int boardPaddingX = (SCREEN_WIDTH - BOARD_WIDTH_UNITS * UNIT_SIZE) / 2;
+	int boardPaddingY = (SCREEN_HEIGHT - BOARD_HEIGHT_USNITS * UNIT_SIZE) / 2;
 
-	SDL_FillRect(gameData->screen, NULL, czarny);
-	board->render(gameData->screen);
-	snake->draw_snake(gameData->screen, niebieski);
+	// Calculate the center of the food
+	int centerX = food.x * UNIT_SIZE + boardPaddingX + UNIT_SIZE / 2;
+	int centerY = food.y * UNIT_SIZE + boardPaddingY + UNIT_SIZE / 2;
+	int radius = UNIT_SIZE / 2;
 
-
-	if (!gameData->snakeAlive) {
-		DrawString(gameData->screen, SCREEN_WIDTH / 2 - 8 * 4, SCREEN_HEIGHT / 2 - 8, "GAME OVER", gameData->charset);
+	// Draw the food as a circle
+	for (int w = 0; w < UNIT_SIZE; w++) {
+		for (int h = 0; h < UNIT_SIZE; h++) {
+			int pixelX = food.x * UNIT_SIZE + boardPaddingX + w;
+			int pixelY = food.y * UNIT_SIZE + boardPaddingY + h;
+			int dx = centerX - pixelX;
+			int dy = centerY - pixelY;
+			if ((dx * dx + dy * dy) <= (radius * radius)) {
+				DrawPixel(screen, pixelX, pixelY, food.color);
+			}
+		}
 	}
-
-
-	drawInfo(gameData->screen, niebieski, czerwony, gameData->worldTime, gameData->fps, gameData->charset, gameData->scrtex, gameData->renderer);
 }
 
-void restartGame(Snake** snake, double& snakeSpeedUnitsPerSeconnd, int& points, bool& snakeAlive) {
+void draw(Snake* snake, Board* board, GameData* gameData) {
+    int czarny = SDL_MapRGB(gameData->screen->format, 0x00, 0x00, 0x00);
+    int zielony = SDL_MapRGB(gameData->screen->format, 0x00, 0xFF, 0x00);
+    int czerwony = SDL_MapRGB(gameData->screen->format, 0xFF, 0x00, 0x00);
+    int niebieski = SDL_MapRGB(gameData->screen->format, 0x11, 0x11, 0xCC);
+    int niebieskiJasny = SDL_MapRGB(gameData->screen->format, 0x00, 0x00, 0xFF);
+
+    SDL_FillRect(gameData->screen, NULL, czarny);
+    board->render(gameData->screen);
+    snake->draw_snake(gameData->screen, niebieski);
+
+	drawFood(gameData->screen, gameData->food);
+	if (gameData->powerUpActive) 
+		drawFood(gameData->screen, gameData->foodPowerUp);
+    
+
+    if (!gameData->snakeAlive) {
+        DrawString(gameData->screen, SCREEN_WIDTH / 2 - 8 * 4, SCREEN_HEIGHT / 2 - 8, "GAME OVER", gameData->charset);
+    }
+
+    drawInfo(gameData->screen, niebieski, czerwony, gameData->worldTime, gameData->fps, gameData->charset, gameData->scrtex, gameData->renderer);
+}
+
+void restartGame(Snake** snake, double& snakeSpeedUnitsPerSeconnd, int& points, bool& snakeAlive, double& timeElapsed) {
 	delete *snake;
 	*snake = getNewSnake(&points);
+	timeElapsed = 0;
 	snakeSpeedUnitsPerSeconnd = SNAKE_SPEED;
 	snakeAlive = true;
 }
+
 
 // main
 #ifdef __cplusplus
@@ -250,13 +371,19 @@ int main(int argc, char **argv) {
 	gameData.quit = 0;
 	gameData.worldTime = 0;
 
-	double snakeSpeedUnitsPerSeconnd = SNAKE_SPEED;
 	double lastSnakeUpdate = 0;
+	gameData.snakeSpeedUnitsPerSeconnd = SNAKE_SPEED;
 	gameData.snakeAlive = true;
 
 
 	Board board = Board(SCREEN_WIDTH, SCREEN_HEIGHT, BOARD_WIDTH_UNITS, BOARD_HEIGHT_USNITS, UNIT_SIZE);
 	Snake* snake = getNewSnake(&gameData.points);
+
+	placeFood(gameData.food, false, gameData.screen->format, snake);
+
+	bool speedUpUsed = false;
+
+	gameData.powerUpActive = false;
 
 	while (!gameData.quit) {
 		gameData.t2 = SDL_GetTicks();
@@ -277,16 +404,19 @@ int main(int argc, char **argv) {
 			gameData.fpsTimer -= 0.5;
 		};
 
-
-		
+		if (!speedUpUsed && gameData.worldTime >= SNAKE_SPEEDUP) {
+			speedUpUsed = true;
+			gameData.snakeSpeedUnitsPerSeconnd *= SNAKE_SPEEDUP_FACTOR;
+		}
 		lastSnakeUpdate += gameData.delta;
-		if (lastSnakeUpdate >= 1 / snakeSpeedUnitsPerSeconnd)
+		if (lastSnakeUpdate >= 1 / gameData.snakeSpeedUnitsPerSeconnd)
 		{
 			lastSnakeUpdate = 0;
-			moveSnake(snake);
+			moveSnake(snake, &gameData);
+
 			if (snake->checkCollision()) {
 				gameData.snakeAlive = false;
-				snakeSpeedUnitsPerSeconnd = 0;
+				gameData.snakeSpeedUnitsPerSeconnd = 0;
 			}
 		}
 		
@@ -316,7 +446,7 @@ int main(int argc, char **argv) {
 					break;
 				case SDLK_n:
 					if (!gameData.snakeAlive) {
-						restartGame(&snake, snakeSpeedUnitsPerSeconnd, gameData.points, gameData.snakeAlive);
+						restartGame(&snake, gameData.snakeSpeedUnitsPerSeconnd , gameData.points, gameData.snakeAlive, gameData.worldTime);
 					}
 					break;
 				}

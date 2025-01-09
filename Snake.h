@@ -22,6 +22,7 @@ public:
 
     void move();
     void grow();
+    void shorten(int units);
     bool checkCollision() const;
 	bool checkIfFreeCell(int x, int y);
     void draw_snake(SDL_Surface* screen, Uint32 color);
@@ -53,8 +54,9 @@ struct Snake::Node {
 Snake::Snake(int length, int x, int y, int unitSize, int boardOffsetX, int boardOffsetY, int* pointsVerivle) :
     length(length), head(nullptr), unitSize(unitSize), boardOffsetX(boardOffsetX), boardOffsetY(boardOffsetY), pointsVerivle(pointsVerivle) {
     // Initialize the snake with a single segment
+    int len = length;
     head = new Node(x, y);
-	tail = new Node(x, y - 1);
+	tail = head;
     head->next_node = tail;
 	*pointsVerivle = 0;
 
@@ -62,6 +64,7 @@ Snake::Snake(int length, int x, int y, int unitSize, int boardOffsetX, int board
 
 	direction = Right;
 	init_snake();
+    this->length = len;
 }
 
 // Destructor definition
@@ -76,8 +79,8 @@ Snake::~Snake() {
 
 void Snake::init_snake() {
 	int length = getLength(); // Example length, replace with actual length if available
-    printf("%d",getLength());
-    for (size_t i = 0; i < length; i++)
+    printf("Length: %d\n",getLength());
+    for (size_t i = 0; i < length-1; i++)
     {
 		grow();
     }
@@ -157,10 +160,35 @@ void Snake::move() {
 	}
 }
 
+void Snake::shorten(int units) {
+    for (int i = 0; i < units; i++) {
+        if (head == tail) {
+            // If the snake has only one segment, do nothing
+            return;
+        }
+
+        Node* current = head;
+        // Traverse to the second-to-last node
+        while (current->next_node != tail) {
+            current = current->next_node;
+        }
+
+        // Delete the last node
+        delete tail;
+        tail = current;
+        tail->next_node = nullptr;
+		length--;
+
+        printf("Length: %d\n", getLength());
+    }
+}
+
 void Snake::grow() {
     int newX = tail->x;
-    int newY = tail->y-1;
+    int newY = tail->y;
     addSegment(newX, newY);
+
+    printf("Length: %d\n", getLength());
 }
 
 void Snake::addSegment(int x, int y) {
@@ -169,6 +197,7 @@ void Snake::addSegment(int x, int y) {
         tail->next_node = newSegment;
     }
     tail = newSegment;
+	length++;
 }
 
 bool Snake::checkCollision() const {
@@ -184,15 +213,21 @@ bool Snake::checkCollision() const {
     return false;
 }
 
+/*
+* This function checks if the given cell is occupied by the snake.
+ * @param x: The x-coordinate of the cell.
+ * @param y: The y-coordinate of the cell.
+ * @return: False if the cell is occupied by the snake, true otherwise.
+ */
 bool Snake::checkIfFreeCell(int x, int y) {
-    bool isCollision = false;
+    bool isFree = true;
 	for (Node* current = head; current != nullptr; current = current->next_node) {
 		if (current->x == x && current->y == y) {
-			isCollision = true;
+            isFree = false;
 			break;
 		}
 	}
-	return isCollision;
+	return isFree;
 }
 
 // Method definition
