@@ -13,7 +13,7 @@ extern "C" {
 } 
 
 #define SCREEN_WIDTH	640
-#define SCREEN_HEIGHT	480
+#define SCREEN_HEIGHT	540
 #define INFO_SCREN_HEIGHT 36
 
 #define BOARD_WIDTH_UNITS 20
@@ -89,6 +89,33 @@ void DrawRectangle(SDL_Surface *screen, int x, int y, int l, int k,
 		DrawLine(screen, x + 1, i, l - 2, 1, 0, fillColor);
 	};
 
+void moveSnake(Snake* snake) {
+	int headX = snake->getHead()->x;
+	int headY = snake->getHead()->y;
+	Snake::Directions direction = snake->getDirection();
+
+	if (headX <= 0 && direction == Snake::Left) {
+		snake->changeDirection(
+			(!snake->checkIfFreeCell(headX, headY - 1) && headY != 0) ? Snake::Up : Snake::Down);
+	}
+	else if (headX >= BOARD_WIDTH_UNITS - 1 && direction == Snake::Right) {
+		snake->changeDirection(
+			(!snake->checkIfFreeCell(headX, headY + 1) && headY != BOARD_HEIGHT_USNITS - 1) ? Snake::Down : Snake::Up);
+	}
+	else if (headY <= 0 && direction == Snake::Up) {
+		snake->changeDirection(
+			(!snake->checkIfFreeCell(headX + 1, headY) && headX != BOARD_WIDTH_UNITS - 1) ? Snake::Right : Snake::Left);
+	}
+	else if (headY >= BOARD_HEIGHT_USNITS - 1 && direction == Snake::Down) {
+		snake->changeDirection(
+			(!snake->checkIfFreeCell(headX - 1, headY) && headX != 0) ? Snake::Left : Snake::Right);
+	}
+
+
+	snake->move();
+}
+
+
 
 // main
 #ifdef __cplusplus
@@ -109,7 +136,7 @@ int main(int argc, char **argv) {
 	Board board = Board(SCREEN_WIDTH, SCREEN_HEIGHT, BOARD_WIDTH_UNITS, BOARD_HEIGHT_USNITS, UNIT_SIZE);
 	int snakeOffsetX = (SCREEN_WIDTH - BOARD_WIDTH_UNITS * UNIT_SIZE) / 2;
 	int snakeOffsetY = (SCREEN_HEIGHT - BOARD_HEIGHT_USNITS * UNIT_SIZE) / 2;
-	Snake snake = Snake(2, 0, 0, UNIT_SIZE, snakeOffsetX, snakeOffsetY);
+	Snake snake = Snake(2, BOARD_WIDTH_UNITS/2, BOARD_HEIGHT_USNITS/2, UNIT_SIZE, snakeOffsetX, snakeOffsetY);
 
 	// console window is not visible, to see the printf output
 	// the option:
@@ -181,7 +208,7 @@ int main(int argc, char **argv) {
 	distance = 0;
 	etiSpeed = 1;
 
-	double snakeSpeedUnitsPerSeconnd = 3;
+	double snakeSpeedUnitsPerSeconnd = 8;
 	double lastSnakeUpdate = 0;
 
 	while (!quit) {
@@ -213,7 +240,7 @@ int main(int argc, char **argv) {
 		if (lastSnakeUpdate >= 1/snakeSpeedUnitsPerSeconnd)
 		{	
 			lastSnakeUpdate = 0;
-			snake.move();
+			moveSnake(&snake);
 		}
 
 		// info text

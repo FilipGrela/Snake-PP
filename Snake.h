@@ -9,37 +9,37 @@ public:
     enum Directions
     {
         Up,
-		Down,
-		Left,
-		Right
+        Down,
+        Left,
+        Right
     };
 
     struct Node;
     Snake(int length, int x, int y, int unitSize, int boardOffsetX, int boardOffsetY); // Constructor declaration
-	~Snake(); // Destructor declaration
-    int getLength() const; // Method to return a value
+    ~Snake(); // Destructor declaration
+    int getLength() const;
+    Directions getDirection() const; // Getter for direction
 
     void move();
     void grow();
     bool checkCollision(int width, int height) const;
+	bool checkIfFreeCell(int x, int y);
     void draw_snake(SDL_Surface* screen, Uint32 color);
-    void changeDirection(Directions newDirection); // New method declaration
+    void changeDirection(Directions newDirection);
 
-
-	Node* getHead() const;
+    Node* getHead() const;
 
 private:
-	int unitSize;
+    int unitSize;
     int length;
     int boardOffsetX;
     int boardOffsetY;
     Node* tail;
     Node* head;
-	Directions direction;
+    Directions direction;
     void addSegment(int x, int y);
-	void init_snake();
+    void init_snake();
 };
-
 
 struct Snake::Node {
     int x, y; // Position of the segment
@@ -77,7 +77,6 @@ void Snake::init_snake() {
     {
 		grow();
     }
-	printf("Snake initialized with:\nlength: %d\n", length);
 }
 
 Snake::Node* Snake::getHead() const {
@@ -85,7 +84,6 @@ Snake::Node* Snake::getHead() const {
 }
 
 void Snake::changeDirection(Directions newDirection) {
-	printf("Changing direction\n");
     // Prevent the snake from reversing direction
     if ((direction == Up && newDirection != Down) ||
         (direction == Down && newDirection != Up) ||
@@ -152,11 +150,6 @@ void Snake::move() {
             current->y = last_old_y;
 
 		}
-
-
-        printf("id: %d Current x: %d, y: %d,\n", i, current->x, current->y);
-        printf("id: %d last_x: %d, last_y: %d,\n", i++, last_x, last_y);
-
 	}
 }
 
@@ -190,9 +183,23 @@ bool Snake::checkCollision(int width, int height) const {
     return false;
 }
 
+bool Snake::checkIfFreeCell(int x, int y) {
+    bool isCollision = false;
+	for (Node* current = head; current != nullptr; current = current->next_node) {
+		if (current->x == x && current->y == y) {
+			isCollision = true;
+			break;
+		}
+	}
+	return isCollision;
+}
 
 // Method definition
 int Snake::getLength() const {
     return length;
+}
+
+Snake::Directions Snake::getDirection() const {
+    return direction;
 }
 
