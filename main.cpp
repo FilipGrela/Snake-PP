@@ -462,13 +462,6 @@ void restartGame(Snake*& snake, double& snakeSpeedUnitsPerSecond, int& points, b
     snakeSpeedUnitsPerSecond = SNAKE_SPEED;
     snakeAlive = true;
 }
-void restartGame(Snake*& snake, double& snakeSpeedUnitsPerSeconnd, int& points, bool& snakeAlive, double& timeElapsed) {
-    delete snake;
-    snake = getNewSnake(&points);
-    timeElapsed = 0;
-    snakeSpeedUnitsPerSeconnd = SNAKE_SPEED;
-    snakeAlive = true;
-}
 
 
 
