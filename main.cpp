@@ -755,7 +755,6 @@ int main(int argc, char** argv) {
 		if (lastSnakeUpdate >= 1 / gameData.snakeSpeedUnitsPerSeconnd)
 		{
 			lastSnakeUpdate = 0;
-			printf("%d", snake->getLength());
 			moveSnake(snake, &gameData);
 
 			// Check if the snake has collided with itself
