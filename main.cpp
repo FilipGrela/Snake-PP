@@ -449,18 +449,25 @@ void draw(Snake* snake, Board* board, GameData* gameData) {
 
 /**
  * @brief Restarts the game by creating a new snake and resetting game variables.
- * @param snake A pointer to the pointer of the Snake object to be reset.
- * @param snakeSpeedUnitsPerSeconnd The speed of the snake in units per second.
+ * @param snake A reference to the pointer of the Snake object to be reset.
+ * @param snakeSpeedUnitsPerSecond The speed of the snake in units per second.
  * @param points The current score.
  * @param snakeAlive The state of the snake (alive or dead).
  * @param timeElapsed The elapsed game time.
  */
-void restartGame(Snake** snake, double& snakeSpeedUnitsPerSeconnd, int& points, bool& snakeAlive, double& timeElapsed) {
-	delete* snake;
-	*snake = getNewSnake(&points);
-	timeElapsed = 0;
-	snakeSpeedUnitsPerSeconnd = SNAKE_SPEED;
-	snakeAlive = true;
+void restartGame(Snake*& snake, double& snakeSpeedUnitsPerSecond, int& points, bool& snakeAlive, double& timeElapsed) {
+    delete snake;
+    snake = getNewSnake(&points);
+    timeElapsed = 0;
+    snakeSpeedUnitsPerSecond = SNAKE_SPEED;
+    snakeAlive = true;
+}
+void restartGame(Snake*& snake, double& snakeSpeedUnitsPerSeconnd, int& points, bool& snakeAlive, double& timeElapsed) {
+    delete snake;
+    snake = getNewSnake(&points);
+    timeElapsed = 0;
+    snakeSpeedUnitsPerSeconnd = SNAKE_SPEED;
+    snakeAlive = true;
 }
 
 
@@ -638,7 +645,7 @@ int initSDL(GameData& gameData) {
  * @param gameData The GameData object containing game state.
  * @param snake The Snake object to control.
  */
-void handleControls(GameData& gameData, Snake* snake) {
+void handleControls(GameData& gameData, Snake*& snake) {
 	while (SDL_PollEvent(&gameData.event)) {
 		switch (gameData.event.type) {
 		case SDL_KEYDOWN:
@@ -666,11 +673,14 @@ void handleControls(GameData& gameData, Snake* snake) {
 					snake->changeDirection(Snake::Right);
 				}
 				break;
+			case SDLK_n:
 				if (!gameData.snakeAlive) {
-					restartGame(&snake, gameData.snakeSpeedUnitsPerSeconnd, gameData.points, gameData.snakeAlive, gameData.worldTime);
 					gameData.scoresTabele = readScores(SCOREBOARD_PATH, SCOREBOARD_SIZE);
+					restartGame(snake, gameData.snakeSpeedUnitsPerSeconnd, gameData.points, gameData.snakeAlive, gameData.worldTime);
 				}
 				break;
+			//case SDLK_w:
+			//	snake->grow();
 			}
 			break;
 		case SDL_KEYUP:
@@ -722,6 +732,7 @@ int main(int argc, char** argv) {
 	while (!gameData.quit) {
 		gameData.t2 = SDL_GetTicks();
 
+
 		// here t2-t1 is the time in milliseconds since
 		// the last screen was drawn
 		// delta is the same time in seconds
@@ -744,6 +755,7 @@ int main(int argc, char** argv) {
 		if (lastSnakeUpdate >= 1 / gameData.snakeSpeedUnitsPerSeconnd)
 		{
 			lastSnakeUpdate = 0;
+			printf("%d", snake->getLength());
 			moveSnake(snake, &gameData);
 
 			// Check if the snake has collided with itself
