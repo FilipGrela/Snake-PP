@@ -21,12 +21,12 @@ extern "C" {
 #define SCOREBOARD_PATH "scoreboard.txt"
 #define SCOREBOARD_SIZE 10
 
-#define BOARD_WIDTH_UNITS 30
-#define BOARD_HEIGHT_USNITS 20
+#define BOARD_WIDTH_UNITS 15 // 30 - max
+#define BOARD_HEIGHT_USNITS 15 // 20 - max
 
-#define UNIT_SIZE 20
+#define UNIT_SIZE 20 // 20 or less
 
-#define SNAKE_SPEED 8 // units per second
+#define SNAKE_SPEED 16 // units per second
 #define SNAKE_INITIAL_LENGTH 3 // initial length of the snake
 #define SNAKE_MINIMUM_SPEED 6 // minimum speed of the snake
 #define SNAKE_SPEEDUP 10 // time after which the snake speeds up in seconds
@@ -34,7 +34,7 @@ extern "C" {
 
 #define POWER_UP_TIME 5 // time after which the power up disappears in seconds
 #define POWER_UP_PROBABILITY 50 // probability of a power up appearing
-#define POWER_UP_SLOWDOWN_FACTOR 0.1 // factor by which the snake slows down when power up is eaten
+#define POWER_UP_SLOWDOWN_FACTOR 0.9 // factor by which the snake slows down when power up is eaten
 #define POWER_UP_SHORTEN_UNITS 5 // number of units by which the snake shortens when power up is eaten
 
 
@@ -205,6 +205,7 @@ void placeFood(Food& food, bool powerUp, SDL_PixelFormat* format, Snake* snake) 
  */
 void handlePowerUp(GameData* gameData, Snake* snake) {
 	if (getRandomNumber(0, 1) == 0) {
+		
 		gameData->snakeSpeedUnitsPerSeconnd *= POWER_UP_SLOWDOWN_FACTOR;
 		if (gameData->snakeSpeedUnitsPerSeconnd < SNAKE_MINIMUM_SPEED) {
 			gameData->snakeSpeedUnitsPerSeconnd = SNAKE_MINIMUM_SPEED;
