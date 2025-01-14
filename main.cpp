@@ -26,7 +26,7 @@ extern "C" {
 
 #define UNIT_SIZE 20 // 20 or less
 
-#define SNAKE_SPEED 16 // units per second
+#define SNAKE_SPEED 8 // units per second
 #define SNAKE_INITIAL_LENGTH 3 // initial length of the snake
 #define SNAKE_MINIMUM_SPEED 6 // minimum speed of the snake
 #define SNAKE_SPEEDUP 10 // time after which the snake speeds up in seconds
@@ -326,11 +326,20 @@ void drawInfo(SDL_Surface* screen, Uint32 color1, Uint32 color2, int points, dou
  * @param pointsVerible A pointer to the score variable.
  * @return A pointer to the new Snake object.
  */
-Snake* getNewSnake(int* pointsVerible) {
+Snake* getNewSnake(int* pointsVerible, SDL_PixelFormat *pixelFormat) {
 	int snakeOffsetX = (SCREEN_WIDTH - BOARD_WIDTH_UNITS * UNIT_SIZE) / 2;
 	int snakeOffsetY = (SCREEN_HEIGHT - BOARD_HEIGHT_USNITS * UNIT_SIZE) / 2;
 
-	return new Snake(SNAKE_INITIAL_LENGTH, BOARD_WIDTH_UNITS / 2, BOARD_HEIGHT_USNITS / 2, UNIT_SIZE, snakeOffsetX, snakeOffsetY, pointsVerible);
+	return new Snake(
+		SNAKE_INITIAL_LENGTH, BOARD_WIDTH_UNITS / 2,
+		BOARD_HEIGHT_USNITS / 2,
+		UNIT_SIZE,
+		snakeOffsetX,
+		snakeOffsetY,
+		pointsVerible,
+		SDL_MapRGB(pixelFormat, 0x00, 0x00, 0xFF),
+		SDL_MapRGB(pixelFormat, 0x18, 0x18, 0xCC)
+	);
 }
 
 /**
@@ -430,7 +439,7 @@ void draw(Snake* snake, Board* board, GameData* gameData) {
 
 	SDL_FillRect(gameData->screen, NULL, czarny);
 	board->render(gameData->screen);
-	snake->drawSnake(gameData->screen, niebieski);
+	snake->drawSnake(gameData->screen);
 
 	drawFood(gameData->screen, gameData->food);
 	if (gameData->powerUpActive) {
@@ -456,9 +465,9 @@ void draw(Snake* snake, Board* board, GameData* gameData) {
  * @param snakeAlive The state of the snake (alive or dead).
  * @param timeElapsed The elapsed game time.
  */
-void restartGame(Snake*& snake, double& snakeSpeedUnitsPerSecond, int& points, bool& snakeAlive, double& timeElapsed) {
+void restartGame(Snake*& snake, double& snakeSpeedUnitsPerSecond, int& points, bool& snakeAlive, double& timeElapsed, SDL_PixelFormat* pixelFormat) {
     delete snake;
-    snake = getNewSnake(&points);
+    snake = getNewSnake(&points, pixelFormat);
     timeElapsed = 0;
     snakeSpeedUnitsPerSecond = SNAKE_SPEED;
     snakeAlive = true;
@@ -670,7 +679,7 @@ void handleControls(GameData& gameData, Snake*& snake) {
 			case SDLK_n:
 				if (!gameData.snakeAlive) {
 					gameData.scoresTabele = readScores(SCOREBOARD_PATH, SCOREBOARD_SIZE);
-					restartGame(snake, gameData.snakeSpeedUnitsPerSeconnd, gameData.points, gameData.snakeAlive, gameData.worldTime);
+					restartGame(snake, gameData.snakeSpeedUnitsPerSeconnd, gameData.points, gameData.snakeAlive, gameData.worldTime, gameData.screen->format);
 				}
 				break;
 			//case SDLK_w:
@@ -709,7 +718,7 @@ int main(int argc, char** argv) {
 
 
 	Board board = Board(SCREEN_WIDTH, SCREEN_HEIGHT, BOARD_WIDTH_UNITS, BOARD_HEIGHT_USNITS, UNIT_SIZE);
-	Snake* snake = getNewSnake(&gameData.points);
+	Snake* snake = getNewSnake(&gameData.points, gameData.screen->format);
 
 	placeFood(gameData.food, false, gameData.screen->format, snake);
 

@@ -15,7 +15,7 @@ public:
 	};
 
 	struct Node;
-	Snake(int length, int x, int y, int unitSize, int boardOffsetX, int boardOffsetY, int* pointsVerivle); // Constructor declaration
+	Snake(int length, int x, int y, int unitSize, int boardOffsetX, int boardOffsetY, int* pointsVerivle, Uint32 snakeColor, Uint32 headColor); // Constructor declaration
 	~Snake(); // Destructor declaration
 	int getLength() const;
 	Directions getDirection() const; // Getter for direction
@@ -26,7 +26,7 @@ public:
 	void shorten(int units);
 	bool checkCollision() const;
 	bool checkIfFreeCell(int x, int y);
-	void drawSnake(SDL_Surface* screen, Uint32 color);
+	void drawSnake(SDL_Surface* screen);
 	void changeDirection(Directions newDirection);
 
 	Node* getHead() const;
@@ -37,6 +37,8 @@ private:
 	int length;
 	int boardOffsetX;
 	int boardOffsetY;
+	Uint32 headColor;
+	Uint32 snakeColor;
 	Node* tail;
 	Node* head;
 	Directions direction;
@@ -62,8 +64,8 @@ struct Snake::Node {
  * @param boardOffsetY The y-offset of the board.
  * @param pointsVerivle A pointer to the score variable.
  */
-Snake::Snake(int length, int x, int y, int unitSize, int boardOffsetX, int boardOffsetY, int* pointsVerivle) :
-	length(length), head(nullptr), unitSize(unitSize), boardOffsetX(boardOffsetX), boardOffsetY(boardOffsetY), pointsVerivle(pointsVerivle) {
+Snake::Snake(int length, int x, int y, int unitSize, int boardOffsetX, int boardOffsetY, int* pointsVerivle, Uint32 snakeColor, Uint32 headColor) :
+	length(length), head(nullptr), unitSize(unitSize), boardOffsetX(boardOffsetX), boardOffsetY(boardOffsetY), pointsVerivle(pointsVerivle), snakeColor(snakeColor), headColor(headColor) {
 	// Initialize the snake with a single segment
 	int len = length;
 	head = new Node(x, y);
@@ -122,17 +124,21 @@ void Snake::changeDirection(Directions newDirection) {
 /**
  * @brief Draws the snake on the screen.
  * @param screen The SDL_Surface to draw on.
- * @param color The color of the snake.
  */
-void Snake::drawSnake(SDL_Surface* screen, Uint32 color) {
+void Snake::drawSnake(SDL_Surface* screen) {
 	Node* current = head;
+	
 	while (current != nullptr) {
+		Uint32 nodeColor = snakeColor;
+		if (current == head) {
+			nodeColor = headColor;
+		}
 		SDL_Rect rect;
 		rect.x = current->x * unitSize + boardOffsetX;
 		rect.y = current->y * unitSize + boardOffsetY;
 		rect.w = unitSize;
 		rect.h = unitSize;
-		SDL_FillRect(screen, &rect, color);
+		SDL_FillRect(screen, &rect, nodeColor);
 		current = current->nextNode;
 	}
 }
