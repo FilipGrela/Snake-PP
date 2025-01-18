@@ -29,8 +29,9 @@ extern "C" {
 #define SNAKE_SPEED 8 // units per second
 #define SNAKE_INITIAL_LENGTH 3 // initial length of the snake
 #define SNAKE_MINIMUM_SPEED 6 // minimum speed of the snake
+
 #define SNAKE_SPEEDUP 10 // time after which the snake speeds up in seconds
-#define SNAKE_SPEEDUP_FACTOR 1.2 // factor by which the snake speeds up
+#define SNAKE_SPEEDUP_FACTOR 1.1 // factor by which the snake speeds up
 
 #define POWER_UP_TIME 5 // time after which the power up disappears in seconds
 #define POWER_UP_PROBABILITY 50 // probability of a power up appearing
@@ -722,8 +723,6 @@ int main(int argc, char** argv) {
 
 	placeFood(gameData.food, false, gameData.screen->format, snake);
 
-	bool speedUpUsed = false;
-
 	gameData.powerUpActive = false;
 	gameData.scoresTabele = readScores(SCOREBOARD_PATH, SCOREBOARD_SIZE);
 
@@ -731,7 +730,8 @@ int main(int argc, char** argv) {
 	for (int i = 0; i < SCOREBOARD_SIZE; i++) {
 		printf("Score %d: %d\n", i + 1, gameData.scoresTabele[i]);
 	}
-
+	
+	double lastSnakeSpeedup = 0;
 	while (!gameData.quit) {
 		gameData.t2 = SDL_GetTicks();
 
@@ -744,12 +744,13 @@ int main(int argc, char** argv) {
 
 		if (gameData.snakeAlive) {
 			gameData.worldTime += gameData.delta;
+			lastSnakeSpeedup += gameData.delta;
 		}
 
 
 		// Speed up the snake after a certain time
-		if (!speedUpUsed && gameData.worldTime >= SNAKE_SPEEDUP) {
-			speedUpUsed = true;
+		if (lastSnakeSpeedup >= SNAKE_SPEEDUP) {
+			lastSnakeSpeedup = 0;
 			gameData.snakeSpeedUnitsPerSeconnd *= SNAKE_SPEEDUP_FACTOR;
 		}
 
