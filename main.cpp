@@ -196,7 +196,7 @@ void placeFood(Food& food, bool powerUp, SDL_PixelFormat* format, Snake* snake) 
 	food.x = x;
 	food.y = y;
 	food.powerUp = powerUp;
-	food.color = powerUp ? SDL_MapRGB(format, 0xFF, 0x00, 0xFF) : SDL_MapRGB(format, 0xFF, 0x00, 0x00);
+	food.color = powerUp ? SDL_MapRGB(format, 0xFF, 0x00, 0x00) : SDL_MapRGB(format, 0x00, 0x00, 0xFF);
 }
 
 /**
