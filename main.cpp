@@ -18,8 +18,8 @@ extern "C" {
 #define SCREEN_HEIGHT	640
 #define INFO_SCREN_HEIGHT 36
 
-#define SCOREBOARD_PATH "scoreboard.txt"
-#define SCOREBOARD_SIZE 10
+//#define SCOREBOARD_PATH "scoreboard.txt"
+//#define SCOREBOARD_SIZE 3
 
 #define BOARD_WIDTH_UNITS 15 // 30 - max
 #define BOARD_HEIGHT_USNITS 15 // 20 - max
@@ -313,7 +313,7 @@ void drawInfo(SDL_Surface* screen, Uint32 color1, Uint32 color2, int points, dou
 	sprintf(text, "Esc - wyjscie, n - nowa gra, \032 \030 \033 \031 - sterowanie");
 	DrawString(screen, screen->w / 2 - strlen(text) * 8 / 2, 20, text, charset);
 
-	sprintf(text, "Wymagania: 1-4, A, B, C, D, F");
+	sprintf(text, "Wymagania: 1-4, A, B, C, D");
 	DrawString(screen, screen->w / 2 - strlen(text) * 8 / 2, 30, text, charset);
 
 	SDL_UpdateTexture(scrtex, NULL, screen->pixels, screen->pitch);
@@ -392,38 +392,38 @@ void drawFood(SDL_Surface* screen, Food food) {
 	}
 }
 
-/**
- * @brief Draws the scoreboard on the screen.
- * @param gameData The GameData object containing game state.
- */
-void drawScoreboard(GameData* gameData) {
-	SDL_Surface* screen = gameData->screen;
-	int x = 10; // X position of the scoreboard
-	int y = 50; // Y position of the scoreboard
-	int lineHeight = 20; // Height of each line
-	int padding = 5; // Padding between lines
-	int headerHeight = 30; // Height of the header
-	int width = 200; // Width of the scoreboard
-
-
-	// Draw the column headers
-	DrawString(screen, x + padding, y, "Rank", gameData->charset);
-	DrawString(screen, x + padding + 50, y, "Score", gameData->charset);
-
-	// Draw the scores
-	y += lineHeight + padding;
-	for (int i = 0; i < SCOREBOARD_SIZE; i++) {
-		if (gameData->scoresTabele[i] >= 0) {
-			char rankText[8];
-			char scoreText[32];
-			sprintf(rankText, "%d.", i + 1);
-			sprintf(scoreText, "%d", gameData->scoresTabele[i]);
-			DrawString(screen, x + padding, y, rankText, gameData->charset);
-			DrawString(screen, x + padding + 50, y, scoreText, gameData->charset);
-			y += lineHeight + padding;
-		}
-	}
-}
+///**
+// * @brief Draws the scoreboard on the screen.
+// * @param gameData The GameData object containing game state.
+// */
+//void drawScoreboard(GameData* gameData) {
+//	SDL_Surface* screen = gameData->screen;
+//	int x = 10; // X position of the scoreboard
+//	int y = 50; // Y position of the scoreboard
+//	int lineHeight = 20; // Height of each line
+//	int padding = 5; // Padding between lines
+//	int headerHeight = 30; // Height of the header
+//	int width = 200; // Width of the scoreboard
+//
+//
+//	// Draw the column headers
+//	DrawString(screen, x + padding, y, "Rank", gameData->charset);
+//	DrawString(screen, x + padding + 50, y, "Score", gameData->charset);
+//
+//	// Draw the scores
+//	y += lineHeight + padding;
+//	for (int i = 0; i < SCOREBOARD_SIZE; i++) {
+//		if (gameData->scoresTabele[i] >= 0) {
+//			char rankText[8];
+//			char scoreText[32];
+//			sprintf(rankText, "%d.", i + 1);
+//			sprintf(scoreText, "%d", gameData->scoresTabele[i]);
+//			DrawString(screen, x + padding, y, rankText, gameData->charset);
+//			DrawString(screen, x + padding + 50, y, scoreText, gameData->charset);
+//			y += lineHeight + padding;
+//		}
+//	}
+//}
 
 
 /**
@@ -453,7 +453,7 @@ void draw(Snake* snake, Board* board, GameData* gameData) {
 		DrawString(gameData->screen, SCREEN_WIDTH / 2 - 8 * 4, SCREEN_HEIGHT / 2 - 8, "GAME OVER", gameData->charset);
 	}
 
-	drawScoreboard(gameData);
+	//drawScoreboard(gameData);
 
 	drawInfo(gameData->screen, niebieski, czerwony, gameData->points, gameData->worldTime, gameData->charset, gameData->scrtex, gameData->renderer);
 }
@@ -679,7 +679,7 @@ void handleControls(GameData& gameData, Snake*& snake) {
 				break;
 			case SDLK_n:
 				if (!gameData.snakeAlive) {
-					gameData.scoresTabele = readScores(SCOREBOARD_PATH, SCOREBOARD_SIZE);
+					//gameData.scoresTabele = readScores(SCOREBOARD_PATH, SCOREBOARD_SIZE);
 					restartGame(snake, gameData.snakeSpeedUnitsPerSeconnd, gameData.points, gameData.snakeAlive, gameData.worldTime, gameData.screen->format);
 				}
 				break;
@@ -724,12 +724,12 @@ int main(int argc, char** argv) {
 	placeFood(gameData.food, false, gameData.screen->format, snake);
 
 	gameData.powerUpActive = false;
-	gameData.scoresTabele = readScores(SCOREBOARD_PATH, SCOREBOARD_SIZE);
+	//gameData.scoresTabele = readScores(SCOREBOARD_PATH, SCOREBOARD_SIZE);
 
 
-	for (int i = 0; i < SCOREBOARD_SIZE; i++) {
-		printf("Score %d: %d\n", i + 1, gameData.scoresTabele[i]);
-	}
+	//for (int i = 0; i < SCOREBOARD_SIZE; i++) {
+	//	printf("Score %d: %d\n", i + 1, gameData.scoresTabele[i]);
+	//}
 	
 	double lastSnakeSpeedup = 0;
 	while (!gameData.quit) {
@@ -765,8 +765,8 @@ int main(int argc, char** argv) {
 			if (snake->checkCollision()) {
 				gameData.snakeAlive = false;
 				gameData.snakeSpeedUnitsPerSeconnd = 0;
-				gameData.scoresTabele[SCOREBOARD_SIZE] = gameData.points;
-				sortedArrayToFile(SCOREBOARD_PATH, gameData.scoresTabele, SCOREBOARD_SIZE);
+				//gameData.scoresTabele[SCOREBOARD_SIZE] = gameData.points;
+				//sortedArrayToFile(SCOREBOARD_PATH, gameData.scoresTabele, SCOREBOARD_SIZE);
 			}
 		}
 

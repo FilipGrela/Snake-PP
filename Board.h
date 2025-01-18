@@ -34,5 +34,14 @@ Board::Board(int screenWidth, int screenHeight, int width, int height, int unitS
  */
 void Board::render(SDL_Surface* surface) {
 	Uint32 green = SDL_MapRGB(surface->format, 0, 255, 0); // Green color
+	Uint32 white = SDL_MapRGB(surface->format, 255, 255, 255); // White color for outline
+
+	// Draw the outline with white color
+	SDL_Rect outlineRect = { boardRect.x - 1, boardRect.y - 1, boardRect.w + 2, boardRect.h + 2 };
+	SDL_FillRect(surface, &outlineRect, white);
+	// Fill the board with green color
 	SDL_FillRect(surface, &boardRect, green);
+
+	
+
 }
